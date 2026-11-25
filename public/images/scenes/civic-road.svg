@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 675" fill="none">
+  <rect width="1200" height="675" fill="#E2E8F0"/>
+  <rect width="1200" height="360" fill="#BAE6FD"/>
+  <!-- Green Coastal Foliage -->
+  <path d="M0 290 Q180 185 380 285 T820 265 T1200 280 L1200 380 L0 380 Z" fill="#166534"/>
+  <!-- Laterite Stone Wall -->
+  <rect x="0" y="340" width="460" height="120" fill="#B91C1C" opacity="0.85"/>
+  <g stroke="#7F1D1D" stroke-width="3" opacity="0.6">
+    <line x1="0" y1="380" x2="460" y2="380"/><line x1="0" y1="420" x2="460" y2="420"/>
+    <line x1="115" y1="340" x2="115" y2="460"/><line x1="240" y1="340" x2="240" y2="460"/><line x1="360" y1="340" x2="360" y2="460"/>
+  </g>
+  <!-- Road Perspective -->
+  <polygon points="320,380 860,380 1200,675 0,675" fill="#334155"/>
+  <polygon points="585,385 615,385 645,675 555,675" fill="#F8FAFC" opacity="0.85"/>
+  <!-- Drainage Culvert Highlight Marker -->
+  <rect x="190" y="480" width="210" height="110" rx="14" fill="#0A2E6E" opacity="0.92"/>
+  <circle cx="245" cy="535" r="24" fill="#D91E2A"/>
+  <text x="245" y="543" text-anchor="middle" fill="#FFFFFF" font-family="sans-serif" font-weight="800" font-size="24">!</text>
+  <text x="285" y="528" fill="#FFFFFF" font-family="sans-serif" font-weight="700" font-size="16">CIVIC REPORT</text>
+  <text x="285" y="552" fill="#CBD5E1" font-family="sans-serif" font-size="13">Culvert Inspection</text>
+</svg>

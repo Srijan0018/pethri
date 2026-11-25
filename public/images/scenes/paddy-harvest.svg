@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 675" fill="none">
+  <defs>
+    <linearGradient id="mornSky" x1="0" y1="0" x2="0" y2="675" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#E0F2FE"/>
+      <stop offset="60%" stop-color="#FEF3C7"/>
+      <stop offset="100%" stop-color="#DCFCE7"/>
+    </linearGradient>
+    <linearGradient id="paddy" x1="0" y1="360" x2="0" y2="675" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#16A34A"/>
+      <stop offset="100%" stop-color="#14532D"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="675" fill="url(#mornSky)"/>
+  <circle cx="240" cy="155" r="68" fill="#FDE047" opacity="0.85"/>
+  <!-- Mist & Hills -->
+  <path d="M0 320 Q280 230 560 305 T1200 285 L1200 410 L0 410 Z" fill="#0A2E6E" opacity="0.22"/>
+  <path d="M0 350 Q350 280 720 340 T1200 320 L1200 430 L0 430 Z" fill="#15803D" opacity="0.6"/>
+  <!-- Paddy Terraces -->
+  <rect x="0" y="380" width="1200" height="295" fill="url(#paddy)"/>
+  <path d="M0 440 Q420 405 1200 455" stroke="#86EFAC" stroke-width="5" opacity="0.65"/>
+  <path d="M0 520 Q560 475 1200 540" stroke="#4ADE80" stroke-width="6" opacity="0.55"/>
+  <path d="M0 605 Q500 565 1200 620" stroke="#BBF7D0" stroke-width="5" opacity="0.4"/>
+  <!-- Coconut Palms -->
+  <g stroke="#14532D" stroke-width="11" stroke-linecap="round">
+    <path d="M890 400 Q915 265 955 155"/>
+    <path d="M1030 415 Q1010 290 985 190"/>
+  </g>
+  <g fill="#166534">
+    <path d="M955 155 Q880 120 835 160 Q900 158 955 155Z"/>
+    <path d="M955 155 Q955 80 1015 75 Q990 120 955 155Z"/>
+    <path d="M955 155 Q1030 125 1075 168 Q1010 162 955 155Z"/>
+    <path d="M985 190 Q915 160 880 198 Q935 194 985 190Z"/>
+    <path d="M985 190 Q1055 165 1090 205 Q1035 198 985 190Z"/>
+  </g>
+  <!-- Golden Rice Sheaves Foreground -->
+  <g stroke="#FACC15" stroke-width="4" stroke-linecap="round">
+    <path d="M160 675 Q170 570 190 520"/><path d="M180 675 Q185 565 215 510"/>
+    <path d="M210 675 Q220 575 245 525"/><path d="M240 675 Q245 570 265 515"/>
+    <path d="M620 675 Q630 575 655 520"/><path d="M650 675 Q660 570 685 515"/>
+  </g>
+  <!-- Farmers Inspecting Harvest -->
+  <circle cx="480" cy="450" r="22" fill="#0A2E6E"/>
+  <path d="M446 565 L455 480 L505 480 L514 565 Z" fill="#D91E2A"/>
+  <circle cx="560" cy="462" r="20" fill="#0A2E6E"/>
+  <path d="M530 565 L538 488 L582 488 L590 565 Z" fill="#FFFFFF"/>
+</svg>

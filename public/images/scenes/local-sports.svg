@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 675" fill="none">
+  <rect width="1200" height="675" fill="#061638"/>
+  <!-- Floodlight Beams -->
+  <polygon points="170,80 560,675 60,675" fill="#38BDF8" opacity="0.16"/>
+  <polygon points="1030,80 1140,675 640,675" fill="#FDE047" opacity="0.16"/>
+  <rect x="130" y="50" width="80" height="32" rx="6" fill="#F8FAFC"/>
+  <rect x="990" y="50" width="80" height="32" rx="6" fill="#F8FAFC"/>
+  <!-- Stadium Ground -->
+  <ellipse cx="600" cy="560" rx="540" ry="175" fill="#15803D"/>
+  <ellipse cx="600" cy="560" rx="420" ry="120" fill="none" stroke="#FFFFFF" stroke-width="5" opacity="0.85"/>
+  <line x1="600" y1="440" x2="600" y2="675" stroke="#D91E2A" stroke-width="6"/>
+  <!-- Spectator Crowd Silhouettes -->
+  <g fill="#0F172A">
+    <circle cx="150" cy="400" r="18"/><circle cx="200" cy="390" r="18"/><circle cx="255" cy="382" r="18"/>
+    <circle cx="945" cy="382" r="18"/><circle cx="1000" cy="390" r="18"/><circle cx="1050" cy="400" r="18"/>
+  </g>
+  <!-- Players in Action -->
+  <circle cx="485" cy="475" r="24" fill="#F8FAFC"/>
+  <path d="M445 585 L465 505 L515 510 L540 575 Z" fill="#D91E2A"/>
+  <circle cx="695" cy="485" r="24" fill="#F8FAFC"/>
+  <path d="M655 585 L675 515 L725 510 L745 585 Z" fill="#0A2E6E"/>
+  <!-- Scoreboard Accent -->
+  <rect x="470" y="130" width="260" height="84" rx="14" fill="#0A2E6E" stroke="#F8FAFC" stroke-width="3"/>
+  <text x="600" y="166" text-anchor="middle" fill="#FDE047" font-family="sans-serif" font-weight="800" font-size="16" letter-spacing="2">BARKUR FLOODLIT CUP</text>
+  <text x="600" y="196" text-anchor="middle" fill="#FFFFFF" font-family="monospace" font-weight="700" font-size="22">PETHRI 28 — 26</text>
+</svg>

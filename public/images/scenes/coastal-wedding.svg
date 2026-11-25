@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 1125" fill="none">
+  <defs>
+    <linearGradient id="wedBg" x1="0" y1="0" x2="900" y2="1125" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#FFF1F2"/>
+      <stop offset="55%" stop-color="#FEF3C7"/>
+      <stop offset="100%" stop-color="#FDE68A"/>
+    </linearGradient>
+  </defs>
+  <rect width="900" height="1125" fill="url(#wedBg)"/>
+  <!-- Mandap Arch -->
+  <path d="M110 1125 L110 380 A340 340 0 0 1 790 380 L790 1125" stroke="#0A2E6E" stroke-width="18" fill="#FFFFFF" fill-opacity="0.55"/>
+  <!-- Jasmine & Marigold Garlands -->
+  <g stroke="#F59E0B" stroke-width="16" stroke-dasharray="1 24" stroke-linecap="round">
+    <path d="M150 390 Q300 470 450 380 Q600 470 750 390"/>
+    <path d="M170 455 Q310 530 450 445 Q590 530 730 455"/>
+  </g>
+  <g stroke="#FFFFFF" stroke-width="12" stroke-dasharray="1 20" stroke-linecap="round">
+    <path d="M150 420 Q300 495 450 410 Q600 495 750 420"/>
+  </g>
+  <!-- Interlocking Rings & Red Diamond Accent -->
+  <circle cx="385" cy="595" r="88" stroke="#0A2E6E" stroke-width="18"/>
+  <circle cx="515" cy="595" r="88" stroke="#0A2E6E" stroke-width="18"/>
+  <polygon points="450,435 495,480 450,535 405,480" fill="#D91E2A"/>
+  <polygon points="450,452 475,480 450,512 425,480" fill="#FCA5A5" opacity="0.5"/>
+  <!-- Brass Nilavilakku Lamps -->
+  <g fill="#B45309">
+    <rect x="210" y="790" width="16" height="170" rx="6"/>
+    <ellipse cx="218" cy="960" rx="45" ry="14"/>
+    <rect x="674" y="790" width="16" height="170" rx="6"/>
+    <ellipse cx="682" cy="960" rx="45" ry="14"/>
+  </g>
+  <ellipse cx="218" cy="770" rx="14" ry="22" fill="#F97316"/>
+  <ellipse cx="682" cy="770" rx="14" ry="22" fill="#F97316"/>
+</svg>
