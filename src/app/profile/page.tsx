@@ -22,6 +22,7 @@ import type { PostItem } from "@/types/pethri";
 function ProfileContent() {
   const searchParams = useSearchParams();
   const requestedUsername = searchParams.get("user");
+  const initialTab = searchParams.get("tab") === "saved" ? "saved" : "contributions";
   const { currentUser } = usePethri();
 
   const viewedProfile =
@@ -29,8 +30,12 @@ function ProfileContent() {
   const isOwnProfile = viewedProfile.id === currentUser.id;
 
   const [posts, setPosts] = useState<PostItem[]>([]);
-  const [tab, setTab] = useState<"contributions" | "saved">("contributions");
+  const [tab, setTab] = useState<"contributions" | "saved">(initialTab);
   const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    setTab(initialTab);
+  }, [initialTab]);
 
   useEffect(() => {
     setLoading(true);
@@ -48,8 +53,8 @@ function ProfileContent() {
   return (
     <div className="mx-auto max-w-5xl px-4 py-6 space-y-6">
       {/* Profile Hero Header */}
-      <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
-        <div className="h-28 bg-gradient-to-r from-[#06183B] via-[#0A2E6E] to-[#D91E2A]" />
+      <div className="overflow-hidden rounded-3xl border border-[#202820]/12 bg-white">
+        <div className="h-24 bg-[#202820] border-b-4 border-[#B7F36B]" />
         <div className="px-6 pb-6">
           <div className="flex flex-wrap items-end justify-between gap-4 -mt-12">
             <div className="flex items-end gap-4">
@@ -84,10 +89,10 @@ function ProfileContent() {
             {isOwnProfile && (
               <Link
                 href="/report"
-                className="inline-flex items-center gap-1.5 rounded-full bg-[#D91E2A] px-4 py-2 text-xs font-bold text-white shadow-md hover:bg-[#B81621]"
+                className="inline-flex items-center gap-1.5 rounded-full bg-[#202820] px-4 py-2 text-xs font-extrabold text-[#B7F36B] hover:opacity-90"
               >
                 <Camera className="h-3.5 w-3.5" />
-                New Report
+                Submit News / Moment
               </Link>
             )}
           </div>
@@ -97,6 +102,12 @@ function ProfileContent() {
           </p>
 
           <div className="mt-5 flex flex-wrap gap-6 border-t border-slate-100 pt-4 text-xs">
+            <div>
+              <span className="font-display text-lg font-extrabold text-[#0A2E6E]">
+                {viewedProfile.followersCount}
+              </span>
+              <span className="ml-1.5 text-slate-500">Followers</span>
+            </div>
             <div>
               <span className="font-display text-lg font-extrabold text-[#0A2E6E]">
                 {myContributions.length}
@@ -130,8 +141,8 @@ function ProfileContent() {
           className={cn(
             "rounded-full px-5 py-2 text-xs font-bold transition-colors",
             tab === "contributions"
-              ? "bg-[#0A2E6E] text-white"
-              : "bg-white border border-slate-200 text-slate-700"
+              ? "bg-[#202820] text-[#B7F36B]"
+              : "bg-white border border-[#202820]/15 text-[#202820]"
           )}
         >
           Reporter Contributions ({myContributions.length})
@@ -142,8 +153,8 @@ function ProfileContent() {
           className={cn(
             "inline-flex items-center gap-1.5 rounded-full px-5 py-2 text-xs font-bold transition-colors",
             tab === "saved"
-              ? "bg-[#0A2E6E] text-white"
-              : "bg-white border border-slate-200 text-slate-700"
+              ? "bg-[#202820] text-[#B7F36B]"
+              : "bg-white border border-[#202820]/15 text-[#202820]"
           )}
         >
           <Bookmark className="h-3.5 w-3.5" />

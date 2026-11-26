@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { MapPin, Search, Users } from "lucide-react";
 import { LocalityMap } from "@/components/LocalityMap";
+import { EditorialReveal } from "@/components/MotionPrimitives";
 import { PostCard } from "@/components/PostCard";
 import { usePethri } from "@/components/PethriProvider";
 import { cn } from "@/lib/utils";
@@ -47,15 +48,15 @@ function ExploreContent() {
     <div className="mx-auto max-w-7xl px-4 py-6 space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <div>
-          <p className="text-xs font-bold uppercase tracking-wider text-[#D91E2A]">
-            Location-Based Discovery
+          <p className="font-mono text-[10px] font-bold uppercase tracking-widest text-[#525F52]">
+            KARAVALI DISCOVERY
           </p>
-          <h1 className="font-display text-2xl sm:text-3xl font-extrabold text-[#0A2E6E]">
-            Explore Pethri &amp; Neighbouring Localities
+          <h1 className="font-display text-2xl sm:text-3xl font-extrabold text-[#202820]">
+            Explore Mangaluru, Udupi, Manipal &amp; Pethri
           </h1>
         </div>
-        <div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3.5 py-2 shadow-2xs sm:w-80">
-          <Search className="h-4 w-4 text-slate-400" />
+        <div className="flex items-center gap-2 rounded-full border border-[#202820]/15 bg-white px-4 py-2 sm:w-80">
+          <Search className="h-4 w-4 text-[#525F52]" />
           <input
             type="search"
             value={query}
@@ -67,18 +68,20 @@ function ExploreContent() {
       </div>
 
       {/* Interactive Geospatial Locality Map */}
-      <LocalityMap
-        localities={localities}
-        posts={posts}
-        selectedLocalityId={activeLocalityId}
-        onSelectLocality={setActiveLocalityId}
-      />
+      <EditorialReveal>
+        <LocalityMap
+          localities={localities}
+          posts={posts}
+          selectedLocalityId={activeLocalityId}
+          onSelectLocality={setActiveLocalityId}
+        />
+      </EditorialReveal>
 
       {/* Selected Locality Spotlight + Nearby Cards */}
       <div className="grid gap-6 lg:grid-cols-12 items-start">
         <div className="lg:col-span-4 space-y-4">
           {selectedLocality ? (
-            <div className="rounded-3xl border border-[#0A2E6E]/20 bg-white p-5 shadow-sm">
+            <div className="rounded-xl border border-[#0A2E6E]/25 border-t-[3px] border-t-[#0A2E6E] bg-white p-5">
               <div className="flex items-center justify-between">
                 <span className="inline-flex items-center gap-1 rounded-full bg-[#D91E2A]/10 px-2.5 py-0.5 text-xs font-bold text-[#D91E2A]">
                   <MapPin className="h-3.5 w-3.5" />
@@ -108,7 +111,7 @@ function ExploreContent() {
               </div>
             </div>
           ) : (
-            <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-xs">
+            <div className="rounded-xl border border-slate-200 bg-white p-5">
               <h2 className="font-display text-lg font-extrabold text-[#0A2E6E]">
                 All Localities ({localities.length})
               </h2>
@@ -132,8 +135,8 @@ function ExploreContent() {
                 className={cn(
                   "rounded-2xl border p-3 text-left transition-all",
                   activeLocalityId === loc.id
-                    ? "border-[#D91E2A] bg-[#D91E2A] text-white shadow-md"
-                    : "border-slate-200 bg-white hover:border-[#0A2E6E]"
+                    ? "border-[#202820] bg-[#202820] text-[#B7F36B] shadow-md"
+                    : "border-[#202820]/10 bg-white hover:border-[#202820]"
                 )}
               >
                 <p className="text-xs font-bold">{loc.name}</p>
@@ -141,8 +144,8 @@ function ExploreContent() {
                   className={cn(
                     "mt-0.5 text-[10px]",
                     activeLocalityId === loc.id
-                      ? "text-white/85"
-                      : "text-slate-500"
+                      ? "text-[#C9E8D5]"
+                      : "text-[#525F52]"
                   )}
                 >
                   {loc.activeReporters} reporters
@@ -166,15 +169,16 @@ function ExploreContent() {
             </div>
           ) : (
             filtered.map((post) => (
-              <PostCard
-                key={post.id}
-                post={post}
-                onPostUpdated={(u) =>
-                  setPosts((prev) =>
-                    prev.map((p) => (p.id === u.id ? u : p))
-                  )
-                }
-              />
+              <EditorialReveal key={post.id}>
+                <PostCard
+                  post={post}
+                  onPostUpdated={(u) =>
+                    setPosts((prev) =>
+                      prev.map((p) => (p.id === u.id ? u : p))
+                    )
+                  }
+                />
+              </EditorialReveal>
             ))
           )}
         </div>

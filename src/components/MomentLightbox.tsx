@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
+import { AnimatePresence, motion } from "framer-motion";
 import {
   ChevronLeft,
   ChevronRight,
@@ -10,8 +11,8 @@ import {
   Share2,
   X,
 } from "lucide-react";
-import { VerificationBadge } from "@/components/VerificationBadge";
 import { RelativeTime } from "@/components/RelativeTime";
+import { VerificationBadge } from "@/components/VerificationBadge";
 import { cn } from "@/lib/utils";
 import type { PostItem } from "@/types/pethri";
 
@@ -53,7 +54,7 @@ export function MomentLightbox({
       role="dialog"
       aria-modal="true"
       aria-label="Pethri Moment viewer"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/95 p-3 backdrop-blur-md"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/95 p-3"
     >
       <button
         type="button"
@@ -64,7 +65,12 @@ export function MomentLightbox({
         <X className="h-5 w-5" />
       </button>
 
-      <div className="relative flex w-full max-w-md flex-col overflow-hidden rounded-3xl bg-[#06183B] text-white shadow-2xl ring-1 ring-white/15 h-[84vh] max-h-[760px]">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.96 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.96 }}
+        className="relative flex w-full max-w-md flex-col overflow-hidden rounded-2xl bg-[#202820] text-[#F7F6EF] shadow-2xl ring-1 ring-white/15 h-[84vh] max-h-[760px]"
+      >
         {/* Story Progress Bars */}
         <div className="flex gap-1.5 px-3 pt-3 z-10">
           {moments.map((m, idx) => (
@@ -91,14 +97,14 @@ export function MomentLightbox({
             <img
               src={current.author.avatarUrl}
               alt={current.author.fullName}
-              className="h-9 w-9 rounded-full object-cover ring-2 ring-[#D91E2A]"
+              className="h-9 w-9 rounded-full object-cover ring-2 ring-[#B7F36B]"
             />
             <div className="min-w-0">
               <p className="text-xs font-bold truncate">
                 {current.author.fullName}
               </p>
-              <p className="flex items-center gap-1 text-[11px] text-slate-300">
-                <MapPin className="h-3 w-3 text-[#D91E2A]" />
+              <p className="flex items-center gap-1 text-[11px] text-[#C9E8D5]">
+                <MapPin className="h-3 w-3 text-[#B7F36B]" />
                 {current.localityName} • <RelativeTime iso={current.createdAt} />
               </p>
             </div>
@@ -106,31 +112,52 @@ export function MomentLightbox({
           <VerificationBadge tier={current.verificationTier} compact />
         </div>
 
-        {/* Media Stage */}
-        <div className="relative flex-1 overflow-hidden bg-black">
-          {media?.mediaType === "video" ? (
-            <video
-              src={media.url}
-              controls
-              autoPlay
-              playsInline
-              className="h-full w-full object-cover"
-            />
-          ) : (
-            <img
-              src={media?.url ?? "/images/scenes/pethri-town.svg"}
-              alt={current.headline}
-              className="h-full w-full object-cover"
-            />
-          )}
+        {/* Swipeable Media Stage */}
+        <motion.div
+          key={current.id}
+          drag="x"
+          dragConstraints={{ left: 0, right: 0 }}
+          dragElastic={0.25}
+          onDragEnd={(_e, info) => {
+            if (info.offset.x < -60 && index < moments.length - 1) {
+              setIndex((i) => i + 1);
+            } else if (info.offset.x > 60 && index > 0) {
+              setIndex((i) => i - 1);
+            }
+          }}
+          className="relative flex-1 overflow-hidden bg-black cursor-grab active:cursor-grabbing"
+        >
+          <AnimatePresence mode="wait">
+            {media?.mediaType === "video" ? (
+              <motion.video
+                key={current.id}
+                src={media.url}
+                controls
+                autoPlay
+                playsInline
+                initial={{ opacity: 0.6 }}
+                animate={{ opacity: 1 }}
+                className="h-full w-full object-cover"
+              />
+            ) : (
+              <motion.img
+                key={current.id}
+                src={media?.url ?? "/images/photos/pethri-town.jpg"}
+                alt={current.headline}
+                initial={{ opacity: 0.65, scale: 1.02 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.25 }}
+                className="h-full w-full object-cover"
+              />
+            )}
+          </AnimatePresence>
 
-          {/* Left / Right Nav Zones */}
           {index > 0 && (
             <button
               type="button"
               aria-label="Previous moment"
               onClick={() => setIndex((i) => i - 1)}
-              className="absolute left-2 top-1/2 -translate-y-1/2 flex h-9 w-9 items-center justify-center rounded-full bg-black/45 text-white hover:bg-black/70"
+              className="absolute left-2 top-1/2 -translate-y-1/2 flex h-9 w-9 items-center justify-center rounded-full bg-black/50 text-white hover:bg-black/75"
             >
               <ChevronLeft className="h-5 w-5" />
             </button>
@@ -140,7 +167,7 @@ export function MomentLightbox({
               type="button"
               aria-label="Next moment"
               onClick={() => setIndex((i) => i + 1)}
-              className="absolute right-2 top-1/2 -translate-y-1/2 flex h-9 w-9 items-center justify-center rounded-full bg-black/45 text-white hover:bg-black/70"
+              className="absolute right-2 top-1/2 -translate-y-1/2 flex h-9 w-9 items-center justify-center rounded-full bg-black/50 text-white hover:bg-black/75"
             >
               <ChevronRight className="h-5 w-5" />
             </button>
@@ -170,25 +197,25 @@ export function MomentLightbox({
                   <span>{current.likesCount}</span>
                 </button>
                 <Link
-                  href="/feed"
+                  href={`/article/${current.id}`}
                   onClick={onClose}
                   className="inline-flex items-center gap-1 rounded-full bg-white/15 px-3 py-1.5 text-xs font-semibold text-white hover:bg-white/25"
                 >
                   <Share2 className="h-3.5 w-3.5" />
-                  <span>Full Story</span>
+                  <span>Read Full Article</span>
                 </Link>
               </div>
               <Link
-                href="/report"
+                href="/report?mode=moment"
                 onClick={onClose}
-                className="rounded-full bg-[#D91E2A] px-3 py-1.5 text-xs font-bold text-white"
+                className="rounded-full bg-[#B7F36B] px-3 py-1.5 text-xs font-extrabold text-[#202820]"
               >
                 + Post Moment
               </Link>
             </div>
           </div>
-        </div>
-      </div>
+        </motion.div>
+      </motion.div>
     </div>
   );
 }

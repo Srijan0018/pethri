@@ -1,24 +1,36 @@
 import {
   DEMO_ANNOUNCEMENTS,
+  DEMO_BROADCAST,
   DEMO_BUSINESSES,
+  DEMO_EVENTS,
+  DEMO_LIVE_STREAMS,
   DEMO_LOCALITIES,
   DEMO_NOTIFICATIONS,
+  DEMO_PLAYLISTS,
   DEMO_POSTS,
   DEMO_PROFILES,
   DEMO_REPORTS,
 } from "@/lib/seed-data";
-import { createSupabaseServerClient, isServerSupabaseConfigured } from "@/lib/supabase/server";
+import {
+  createSupabaseServerClient,
+  isServerSupabaseConfigured,
+} from "@/lib/supabase/server";
 import type {
+  ChannelPlaylist,
   CommunityAnnouncement,
   ContentReport,
+  LiveBroadcast,
   LocalBusiness,
+  LocalEvent,
   Locality,
   ModerationStatus,
   NotificationItem,
   PostCategory,
   PostFormat,
-  PostMediaItem,
   PostItem,
+  PostMediaItem,
+  PostSourceKind,
+  SponsorInfo,
   UserProfile,
   UserRole,
   VerificationTier,
@@ -32,6 +44,10 @@ interface PethriRuntimeStore {
   businesses: LocalBusiness[];
   announcements: CommunityAnnouncement[];
   notifications: NotificationItem[];
+  broadcast: LiveBroadcast;
+  liveStreams: LiveBroadcast[];
+  playlists: ChannelPlaylist[];
+  events: LocalEvent[];
 }
 
 declare global {
@@ -48,15 +64,25 @@ function getRuntimeStore(): PethriRuntimeStore {
       businesses: structuredClone(DEMO_BUSINESSES),
       announcements: structuredClone(DEMO_ANNOUNCEMENTS),
       notifications: structuredClone(DEMO_NOTIFICATIONS),
+      broadcast: structuredClone(DEMO_BROADCAST),
+      liveStreams: structuredClone(DEMO_LIVE_STREAMS),
+      playlists: structuredClone(DEMO_PLAYLISTS),
+      events: structuredClone(DEMO_EVENTS),
     };
   }
   return globalThis.__pethriRuntimeStore;
+}
+
+export function isNewsroomAuthorized(role?: UserRole): boolean {
+  return role === "journalist" || role === "editor" || role === "admin";
 }
 
 export interface ListPostsFilter {
   locality?: string;
   category?: PostCategory | "all";
   verification?: VerificationTier | "all";
+  sourceKind?: PostSourceKind | "all";
+  playlistSlug?: string;
   search?: string;
   onlyMoments?: boolean;
   includePending?: boolean;
@@ -68,7 +94,10 @@ export async function listLocalities(): Promise<Locality[]> {
     try {
       const supabase = await createSupabaseServerClient();
       if (supabase) {
-        const { data } = await supabase.from("localities").select("*").order("name");
+        const { data } = await supabase
+          .from("localities")
+          .select("*")
+          .order("name");
         if (data && data.length > 0) {
           return data.map((row, idx) => ({
             id: row.id,
@@ -83,12 +112,13 @@ export async function listLocalities(): Promise<Locality[]> {
             mapY: DEMO_LOCALITIES[idx % DEMO_LOCALITIES.length]?.mapY ?? 50,
             description: row.description ?? "",
             activeReporters: row.active_reporters ?? 0,
+            followersCount: 500,
             isPrimary: row.slug === "pethri",
           }));
         }
       }
     } catch {
-      // Fallback safely to seeded localities
+      // Fall back safely to seeded localities
     }
   }
   return getRuntimeStore().localities;
@@ -105,7 +135,7 @@ export async function listPosts(filters: ListPostsFilter = {}): Promise<{
         let query = supabase
           .from("posts")
           .select(
-            "*, author:profiles!posts_author_id_fkey(id,username,full_name,avatar_url,role,is_verified_reporter), locality:localities!posts_locality_id_fkey(id,slug,name), media:post_media(*), comments(*, author:profiles!comments_author_id_fkey(id,username,full_name,avatar_url))"
+            "*, author:profiles!posts_author_id_fkey(id,username,full_name,avatar_url,role,is_verified_reporter), locality:localities!posts_locality_id_fkey(id,slug,name), media:post_media(*), corrections:post_corrections(*), comments(*, author:profiles!comments_author_id_fkey(id,username,full_name,avatar_url))"
           )
           .order("created_at", { ascending: false });
 
@@ -129,7 +159,12 @@ export async function listPosts(filters: ListPostsFilter = {}): Promise<{
             const locObj = (row.locality as Record<string, unknown>) ?? {};
             const mediaRows = Array.isArray(row.media) ? row.media : [];
             const commentRows = Array.isArray(row.comments) ? row.comments : [];
+            const corrRows = Array.isArray(row.corrections)
+              ? row.corrections
+              : [];
             const sharePrecise = Boolean(row.share_precise_location);
+            const sourceKind =
+              (row.source_kind as PostSourceKind) ?? "citizen";
 
             return {
               id: String(row.id),
@@ -148,15 +183,34 @@ export async function listPosts(filters: ListPostsFilter = {}): Promise<{
               localityName: String(locObj.name ?? "Pethri"),
               category: row.category as PostCategory,
               format: row.format as PostFormat,
+              sourceKind,
+              sponsorInfo:
+                sourceKind === "sponsored" && row.sponsor_advertiser
+                  ? {
+                      advertiserName: String(row.sponsor_advertiser),
+                      disclosure: String(
+                        row.sponsor_disclosure ?? "Sponsored Local Partner"
+                      ),
+                    }
+                  : undefined,
               headline: String(row.headline),
               body: String(row.body),
               isBreaking: Boolean(row.is_breaking),
               isMoment: Boolean(row.is_moment),
+              playlistSlug: row.playlist_slug
+                ? String(row.playlist_slug)
+                : undefined,
               verificationTier: row.verification_tier as VerificationTier,
               moderationStatus: row.moderation_status as ModerationStatus,
               moderationNotes: row.moderation_notes
                 ? String(row.moderation_notes)
                 : undefined,
+              corrections: corrRows.map((c: Record<string, unknown>) => ({
+                id: String(c.id),
+                summary: String(c.summary),
+                correctedBy: "Pethri Newsroom Desk",
+                correctedAt: String(c.created_at),
+              })),
               sharePreciseLocation: sharePrecise,
               publicLat: sharePrecise ? (row.precise_lat as number | null) : null,
               publicLng: sharePrecise ? (row.precise_lng as number | null) : null,
@@ -197,7 +251,10 @@ export async function listPosts(filters: ListPostsFilter = {}): Promise<{
             };
           });
 
-          return { posts: applyInMemoryFilters(mapped, filters), source: "supabase" };
+          return {
+            posts: applyInMemoryFilters(mapped, filters),
+            source: "supabase",
+          };
         }
       }
     } catch {
@@ -241,6 +298,16 @@ function applyInMemoryFilters(
         filters.verification !== "all" &&
         post.verificationTier !== filters.verification
       ) {
+        return false;
+      }
+      if (
+        filters.sourceKind &&
+        filters.sourceKind !== "all" &&
+        post.sourceKind !== filters.sourceKind
+      ) {
+        return false;
+      }
+      if (filters.playlistSlug && post.playlistSlug !== filters.playlistSlug) {
         return false;
       }
       if (filters.onlyMoments && !post.isMoment) {
@@ -298,7 +365,7 @@ export async function createCitizenPost(
       isVerifiedReporter: false,
     };
 
-  // CRITICAL TRUST INVARIANT: Citizen submissions NEVER start as verified or approved.
+  // CRITICAL TRUST INVARIANT: Citizen submissions ALWAYS start as 'citizen', 'community', and 'pending'.
   const newPost: PostItem = {
     id: `post-${Date.now()}`,
     authorId: profile.id,
@@ -314,14 +381,15 @@ export async function createCitizenPost(
     localityName: locality.name,
     category: input.category,
     format: input.format,
+    sourceKind: "citizen",
     headline: input.headline.trim(),
     body: input.body.trim(),
     isBreaking: false,
     isMoment: input.isMoment,
     verificationTier: "community",
     moderationStatus: "pending",
+    corrections: [],
     sharePreciseLocation: Boolean(input.sharePreciseLocation),
-    // Privacy guard: strip coordinates unless explicitly consented
     publicLat: input.sharePreciseLocation ? (input.preciseLat ?? null) : null,
     publicLng: input.sharePreciseLocation ? (input.preciseLng ?? null) : null,
     approxLandmark: input.approxLandmark?.trim() || undefined,
@@ -344,14 +412,112 @@ export async function createCitizenPost(
     id: `notif-${Date.now()}`,
     localityId: locality.id,
     localityName: locality.name,
-    title: "Submission Received",
-    message: `"${newPost.headline.slice(0, 64)}" is queued for Pethri Editorial Review.`,
+    title: "Citizen Report Queued",
+    message: `"${newPost.headline.slice(0, 64)}" is awaiting Pethri Editorial Review.`,
     href: "/editorial",
     isRead: false,
     createdAt: new Date().toISOString(),
   });
 
   return newPost;
+}
+
+export function createNewsroomDispatch(input: {
+  authorId: string;
+  localityId: string;
+  category: PostCategory;
+  format: PostFormat;
+  sourceKind: "newsroom" | "sponsored";
+  sponsorInfo?: SponsorInfo;
+  headline: string;
+  body: string;
+  isBreaking: boolean;
+  isMoment: boolean;
+  playlistSlug?: string;
+  approxLandmark?: string;
+  media: Omit<PostMediaItem, "id">[];
+}): { post?: PostItem; error?: string } {
+  const store = getRuntimeStore();
+  const author = store.profiles.find((p) => p.id === input.authorId);
+
+  if (!author || !isNewsroomAuthorized(author.role) || author.isSuspended) {
+    return {
+      error:
+        "Unauthorized: only accredited Newsroom Journalists, Editors, or Admins may publish official dispatches or breaking news.",
+    };
+  }
+
+  const locality =
+    store.localities.find((l) => l.id === input.localityId) ??
+    store.localities[0];
+
+  const isSponsored = input.sourceKind === "sponsored";
+  const post: PostItem = {
+    id: `post-${Date.now()}`,
+    authorId: author.id,
+    author: {
+      id: author.id,
+      username: author.username,
+      fullName: author.fullName,
+      avatarUrl: author.avatarUrl,
+      role: author.role,
+      isVerifiedReporter: author.isVerifiedReporter,
+    },
+    localityId: locality.id,
+    localityName: locality.name,
+    category: input.category,
+    format: input.format,
+    sourceKind: input.sourceKind,
+    sponsorInfo: isSponsored
+      ? {
+          advertiserName:
+            input.sponsorInfo?.advertiserName?.trim() || "Local Partner",
+          disclosure:
+            input.sponsorInfo?.disclosure?.trim() ||
+            "Sponsored Local Partner • Paid Notice",
+        }
+      : undefined,
+    headline: input.headline.trim(),
+    body: input.body.trim(),
+    isBreaking: isSponsored ? false : Boolean(input.isBreaking),
+    isMoment: Boolean(input.isMoment),
+    playlistSlug: input.playlistSlug,
+    verificationTier: isSponsored ? "reviewed" : "verified",
+    moderationStatus: "approved",
+    reviewedBy: author.id,
+    reviewedAt: new Date().toISOString(),
+    corrections: [],
+    sharePreciseLocation: false,
+    approxLandmark: input.approxLandmark?.trim() || undefined,
+    media: input.media.map((m, idx) => ({
+      ...m,
+      id: `media-${Date.now()}-${idx}`,
+    })),
+    likesCount: 0,
+    commentsCount: 0,
+    sharesCount: 0,
+    likedByMe: false,
+    bookmarkedByMe: false,
+    comments: [],
+    isDemoData: true,
+    createdAt: new Date().toISOString(),
+  };
+
+  store.posts.unshift(post);
+  if (post.isBreaking) {
+    store.notifications.unshift({
+      id: `notif-${Date.now()}`,
+      localityId: locality.id,
+      localityName: locality.name,
+      title: `BREAKING • ${locality.name}`,
+      message: post.headline,
+      href: "/feed",
+      isRead: false,
+      createdAt: new Date().toISOString(),
+    });
+  }
+
+  return { post };
 }
 
 export function engageRuntimePost(
@@ -418,7 +584,7 @@ export function reviewRuntimePost(
       localityId: post.localityId,
       localityName: post.localityName,
       title: `Story ${update.verificationTier === "verified" ? "Verified" : "Published"}`,
-      message: `${post.localityName}: "${post.headline.slice(0, 68)}" is now live in the feed.`,
+      message: `${post.localityName}: "${post.headline.slice(0, 68)}" is now live.`,
       href: "/feed",
       isRead: false,
       createdAt: new Date().toISOString(),
@@ -426,6 +592,207 @@ export function reviewRuntimePost(
   }
 
   return post;
+}
+
+export function addPostCorrection(
+  postId: string,
+  input: { summary: string; correctedBy: string }
+): PostItem | null {
+  const store = getRuntimeStore();
+  const post = store.posts.find((p) => p.id === postId);
+  if (!post || !input.summary.trim()) return null;
+
+  post.corrections.unshift({
+    id: `corr-${Date.now()}`,
+    summary: input.summary.trim(),
+    correctedBy: input.correctedBy,
+    correctedAt: new Date().toISOString(),
+  });
+  return post;
+}
+
+export function getLiveBroadcast(): LiveBroadcast {
+  return getRuntimeStore().liveStreams[0] ?? getRuntimeStore().broadcast;
+}
+
+export function listLiveStreams(locality?: string): LiveBroadcast[] {
+  const streams = getRuntimeStore().liveStreams;
+  if (!locality || locality === "all") return streams;
+  return streams.filter((s) => s.localityId === locality);
+}
+
+export function createCommunityLiveStream(input: {
+  hostId: string;
+  hostName: string;
+  hostUsername: string;
+  title: string;
+  summary: string;
+  localityId: string;
+  category: PostCategory;
+}): LiveBroadcast {
+  const store = getRuntimeStore();
+  const host = store.profiles.find((p) => p.id === input.hostId);
+  const loc =
+    store.localities.find((l) => l.id === input.localityId) ??
+    store.localities[0];
+  const isOfficial = host ? isNewsroomAuthorized(host.role) : false;
+
+  const posterByCategory: Record<PostCategory, string> = {
+    news: "/images/photos/pethri-town.jpg",
+    church: "/images/photos/church-feast.jpg",
+    weddings: "/images/photos/coastal-wedding.jpg",
+    agriculture: "/images/photos/paddy-harvest.jpg",
+    sports: "/images/photos/local-sports.jpg",
+    civic: "/images/photos/civic-road.jpg",
+    celebrations: "/images/photos/church-feast.jpg",
+  };
+
+  const stream: LiveBroadcast = {
+    id: `live-${Date.now()}`,
+    title: input.title.trim(),
+    summary: input.summary.trim(),
+    channelName: isOfficial ? "Pethri Newsroom Live" : `${loc.name} Community Live`,
+    localityId: loc.id,
+    localityName: loc.name,
+    category: input.category,
+    streamSourceKind: isOfficial ? "official_newsroom" : "community",
+    hostName: host?.fullName ?? input.hostName,
+    hostUsername: host?.username ?? input.hostUsername,
+    isLive: true,
+    viewerCount: 1,
+    reactionsCount: 0,
+    posterUrl: posterByCategory[input.category] ?? "/images/photos/pethri-town.jpg",
+    startedAt: new Date().toISOString(),
+    chatMessages: [
+      {
+        id: `lc-${Date.now()}`,
+        streamId: `live-${Date.now()}`,
+        senderName: host?.fullName ?? input.hostName,
+        senderHandle: host?.username ?? input.hostUsername,
+        text: `Live stream started from ${loc.name}! Join the conversation below.`,
+        sentAt: new Date().toISOString(),
+      },
+    ],
+  };
+
+  store.liveStreams.unshift(stream);
+  return stream;
+}
+
+export function postLiveChatMessage(
+  streamId: string,
+  input: { senderName: string; senderHandle: string; text: string }
+): LiveBroadcast | null {
+  const store = getRuntimeStore();
+  const stream = store.liveStreams.find((s) => s.id === streamId);
+  if (!stream || !input.text.trim()) return null;
+
+  stream.chatMessages.push({
+    id: `lc-${Date.now()}`,
+    streamId: stream.id,
+    senderName: input.senderName,
+    senderHandle: input.senderHandle,
+    text: input.text.trim(),
+    sentAt: new Date().toISOString(),
+  });
+  return stream;
+}
+
+export function sendLiveReaction(streamId: string): LiveBroadcast | null {
+  const store = getRuntimeStore();
+  const stream = store.liveStreams.find((s) => s.id === streamId);
+  if (!stream) return null;
+  stream.reactionsCount += 1;
+  return stream;
+}
+
+export function updateLiveBroadcast(input: {
+  actorId: string;
+  isLive?: boolean;
+  title?: string;
+  summary?: string;
+  localityId?: string;
+}): { broadcast?: LiveBroadcast; error?: string } {
+  const store = getRuntimeStore();
+  const actor = store.profiles.find((p) => p.id === input.actorId);
+  if (!actor || !isNewsroomAuthorized(actor.role) || actor.isSuspended) {
+    return {
+      error:
+        "Unauthorized: only accredited Newsroom staff can start or update official Live Broadcasts.",
+    };
+  }
+  const loc = store.localities.find((l) => l.id === input.localityId);
+  const target = store.liveStreams[0] ?? store.broadcast;
+  if (typeof input.isLive === "boolean") target.isLive = input.isLive;
+  if (input.title?.trim()) target.title = input.title.trim();
+  if (input.summary?.trim()) target.summary = input.summary.trim();
+  if (loc) {
+    target.localityId = loc.id;
+    target.localityName = loc.name;
+  }
+  target.hostName = actor.fullName;
+  if (target.isLive) {
+    target.startedAt = new Date().toISOString();
+  }
+  store.broadcast = target;
+  return { broadcast: target };
+}
+
+export function listPlaylists(): ChannelPlaylist[] {
+  return getRuntimeStore().playlists;
+}
+
+export function togglePlaylistSubscription(
+  playlistId: string
+): ChannelPlaylist | null {
+  const store = getRuntimeStore();
+  const pl = store.playlists.find((p) => p.id === playlistId);
+  if (!pl) return null;
+  pl.subscribedByMe = !pl.subscribedByMe;
+  pl.subscribersCount = Math.max(
+    0,
+    pl.subscribersCount + (pl.subscribedByMe ? 1 : -1)
+  );
+  return pl;
+}
+
+export function listEvents(locality?: string): LocalEvent[] {
+  const events = getRuntimeStore().events;
+  if (!locality || locality === "all") return events;
+  return events.filter((e) => e.localityId === locality);
+}
+
+export function toggleEventRsvp(eventId: string): LocalEvent | null {
+  const store = getRuntimeStore();
+  const evt = store.events.find((e) => e.id === eventId);
+  if (!evt) return null;
+  evt.rsvpedByMe = !evt.rsvpedByMe;
+  evt.rsvpCount = Math.max(0, evt.rsvpCount + (evt.rsvpedByMe ? 1 : -1));
+  return evt;
+}
+
+export function toggleFollowProfile(profileId: string): UserProfile | null {
+  const store = getRuntimeStore();
+  const prof = store.profiles.find((p) => p.id === profileId);
+  if (!prof) return null;
+  prof.followedByMe = !prof.followedByMe;
+  prof.followersCount = Math.max(
+    0,
+    prof.followersCount + (prof.followedByMe ? 1 : -1)
+  );
+  return prof;
+}
+
+export function toggleFollowLocality(localityId: string): Locality | null {
+  const store = getRuntimeStore();
+  const loc = store.localities.find((l) => l.id === localityId);
+  if (!loc) return null;
+  loc.followedByMe = !loc.followedByMe;
+  loc.followersCount = Math.max(
+    0,
+    (loc.followersCount ?? 0) + (loc.followedByMe ? 1 : -1)
+  );
+  return loc;
 }
 
 export function listReports(): ContentReport[] {
@@ -473,7 +840,11 @@ export function listProfiles(): UserProfile[] {
 
 export function updateProfileGovernance(
   userId: string,
-  updates: { role?: UserRole; isVerifiedReporter?: boolean; isSuspended?: boolean }
+  updates: {
+    role?: UserRole;
+    isVerifiedReporter?: boolean;
+    isSuspended?: boolean;
+  }
 ): UserProfile | null {
   const store = getRuntimeStore();
   const profile = store.profiles.find((p) => p.id === userId);

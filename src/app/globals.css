@@ -1,17 +1,18 @@
 @import "tailwindcss";
 
 :root {
-  --pethri-navy: #0a2e6e;
-  --pethri-navy-deep: #06183b;
-  --pethri-red: #d91e2a;
-  --pethri-paper: #f7f9fc;
-  --pethri-ink: #0b1426;
+  --pethri-cream: #f7f6ef;
+  --pethri-pista: #dcebcb;
+  --pethri-lime: #b7f36b;
+  --pethri-mint: #c9e8d5;
+  --pethri-forest: #202820;
+  --pethri-muted: #525f52;
 }
 
 @theme inline {
-  --font-sans: var(--font-jakarta), ui-sans-serif, system-ui, sans-serif;
-  --font-display: var(--font-syne), ui-sans-serif, system-ui, sans-serif;
-  --font-editorial: var(--font-instrument), Georgia, serif;
+  --font-sans: var(--font-jakarta), var(--font-kannada), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-syne), var(--font-kannada), ui-sans-serif, system-ui, sans-serif;
+  --font-editorial: var(--font-instrument), var(--font-kannada), Georgia, serif;
   --font-mono: var(--font-jetbrains), ui-monospace, monospace;
 }
 
@@ -20,22 +21,34 @@ html {
 }
 
 body {
-  background-color: var(--pethri-paper);
-  color: var(--pethri-ink);
+  background-color: var(--pethri-cream);
+  color: var(--pethri-forest);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
 }
 
-.bg-editorial-grid {
-  background-image: radial-gradient(rgba(10, 46, 110, 0.08) 1px, transparent 1px);
-  background-size: 22px 22px;
+/* Subtle dot texture for Karavali Luxe sections */
+.bg-pista-grid {
+  background-image: radial-gradient(rgba(32, 40, 32, 0.08) 1px, transparent 1px);
+  background-size: 24px 24px;
 }
 
-.bg-navy-grid {
+.bg-forest-grid {
   background-image:
-    linear-gradient(to right, rgba(255, 255, 255, 0.06) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(255, 255, 255, 0.06) 1px, transparent 1px);
-  background-size: 42px 42px;
+    linear-gradient(to right, rgba(183, 243, 107, 0.06) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(183, 243, 107, 0.06) 1px, transparent 1px);
+  background-size: 44px 44px;
+}
+
+/* Longform editorial dropcap */
+.editorial-dropcap::first-letter {
+  float: left;
+  font-family: var(--font-editorial);
+  font-size: 3.5rem;
+  line-height: 0.86;
+  padding-right: 0.55rem;
+  padding-top: 0.25rem;
+  color: var(--pethri-forest);
 }
 
 @keyframes pethri-marquee {
@@ -50,11 +63,20 @@ body {
 .animate-marquee {
   display: flex;
   width: max-content;
-  animation: pethri-marquee 32s linear infinite;
+  animation: pethri-marquee 34s linear infinite;
 }
 
 .animate-marquee:hover {
   animation-play-state: paused;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  .animate-marquee {
+    animation: none;
+  }
 }
 
 .no-scrollbar::-webkit-scrollbar {

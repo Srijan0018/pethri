@@ -33,71 +33,51 @@ export function formatRelativeTime(
 export const CATEGORY_META = {
   news: {
     label: "Local News",
+    labelKn: "ಸ್ಥಳೀಯ ಸುದ್ದಿ",
     short: "News",
-    accent: "bg-[#0A2E6E] text-white",
-    pill: "bg-[#0A2E6E]/10 text-[#0A2E6E] border-[#0A2E6E]/20",
+    accent: "bg-[#202820] text-[#B7F36B]",
+    pill: "bg-[#DCEBCB] text-[#202820] border-[#202820]/15",
   },
   church: {
     label: "Church & Faith",
-    short: "Church",
-    accent: "bg-[#D91E2A] text-white",
-    pill: "bg-[#D91E2A]/10 text-[#B91420] border-[#D91E2A]/20",
+    labelKn: "ಚರ್ಚ್ ಮತ್ತು ಧಾರ್ಮಿಕ",
+    short: "Faith",
+    accent: "bg-[#202820] text-[#C9E8D5]",
+    pill: "bg-[#C9E8D5] text-[#202820] border-[#202820]/15",
   },
   weddings: {
     label: "Weddings",
+    labelKn: "ಮದುವೆ ಸಂಭ್ರಮ",
     short: "Weddings",
-    accent: "bg-rose-600 text-white",
-    pill: "bg-rose-50 text-rose-700 border-rose-200",
+    accent: "bg-[#202820] text-[#F7F6EF]",
+    pill: "bg-[#F7F6EF] text-[#202820] border-[#202820]/20",
   },
   agriculture: {
     label: "Agriculture",
+    labelKn: "ಕೃಷಿ ಮತ್ತು ಬೆಳೆ",
     short: "Farming",
-    accent: "bg-emerald-700 text-white",
-    pill: "bg-emerald-50 text-emerald-800 border-emerald-200",
+    accent: "bg-[#202820] text-[#B7F36B]",
+    pill: "bg-[#DCEBCB] text-[#202820] border-[#202820]/20",
   },
   sports: {
-    label: "Sports",
+    label: "Sports & Kabaddi",
+    labelKn: "ಕ್ರೀಡೆ ಮತ್ತು ಕಬಡ್ಡಿ",
     short: "Sports",
-    accent: "bg-amber-600 text-white",
-    pill: "bg-amber-50 text-amber-800 border-amber-200",
+    accent: "bg-[#B7F36B] text-[#202820]",
+    pill: "bg-[#B7F36B]/50 text-[#202820] border-[#202820]/20",
   },
   civic: {
     label: "Public Issues",
+    labelKn: "ಸಾರ್ವಜನಿಕ ಸಮಸ್ಯೆ",
     short: "Civic",
-    accent: "bg-slate-800 text-white",
-    pill: "bg-slate-100 text-slate-800 border-slate-300",
+    accent: "bg-[#202820] text-[#F7F6EF]",
+    pill: "bg-stone-200/70 text-[#202820] border-[#202820]/20",
   },
   celebrations: {
     label: "Celebrations",
+    labelKn: "ಉತ್ಸವ ಮತ್ತು ಹಬ್ಬ",
     short: "Events",
-    accent: "bg-indigo-700 text-white",
-    pill: "bg-indigo-50 text-indigo-800 border-indigo-200",
-  },
-} as const;
-
-export const VERIFICATION_META = {
-  community: {
-    label: "Community Submission",
-    shortLabel: "Community",
-    description:
-      "Submitted by a local resident. Not yet verified by the Pethri editorial desk.",
-    className: "bg-amber-50 text-amber-800 border-amber-200",
-    dotClass: "bg-amber-500",
-  },
-  reviewed: {
-    label: "Editorially Reviewed",
-    shortLabel: "Reviewed",
-    description:
-      "Checked by a Pethri desk editor for context, locality accuracy, and community guidelines.",
-    className: "bg-[#0A2E6E]/10 text-[#0A2E6E] border-[#0A2E6E]/25",
-    dotClass: "bg-[#0A2E6E]",
-  },
-  verified: {
-    label: "Officially Verified",
-    shortLabel: "Verified",
-    description:
-      "Confirmed with local authorities, parish/panchayat records, or on-ground correspondents.",
-    className: "bg-emerald-50 text-emerald-800 border-emerald-200",
-    dotClass: "bg-emerald-600",
+    accent: "bg-[#C9E8D5] text-[#202820]",
+    pill: "bg-[#C9E8D5]/80 text-[#202820] border-[#202820]/15",
   },
 } as const;

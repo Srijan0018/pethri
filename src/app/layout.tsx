@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import {
   Instrument_Serif,
   JetBrains_Mono,
+  Noto_Sans_Kannada,
   Plus_Jakarta_Sans,
   Syne,
 } from "next/font/google";
@@ -13,6 +15,12 @@ const jakarta = Plus_Jakarta_Sans({
   subsets: ["latin"],
   variable: "--font-jakarta",
   weight: ["400", "500", "600", "700", "800"],
+});
+
+const kannada = Noto_Sans_Kannada({
+  subsets: ["kannada"],
+  variable: "--font-kannada",
+  weight: ["400", "500", "600", "700"],
 });
 
 const syne = Syne({
@@ -35,9 +43,10 @@ const jetbrains = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Pethri.com — Hyperlocal Social News & Citizen Journalism Network",
+  title:
+    "Pethri.com — Karavali Hyperlocal Social News & Live Community Network",
   description:
-    "Real-time happenings, verified dispatches, Pethri Moments, church festivals, agriculture updates, weddings, and civic stories across Pethri and Brahmavar.",
+    "Verified local news, Instagram-style community moments, and live broadcasting across Mangaluru, Udupi, Manipal, Kundapura, and Pethri.",
 };
 
 export default function RootLayout({
@@ -48,11 +57,13 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${jakarta.variable} ${syne.variable} ${instrument.variable} ${jetbrains.variable} h-full antialiased`}
+      className={`${jakarta.variable} ${kannada.variable} ${syne.variable} ${instrument.variable} ${jetbrains.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col bg-[#F7F9FC] text-[#0B1426]">
+      <body className="min-h-full flex flex-col bg-[#F7F6EF] text-[#202820]">
         <PethriProvider>
-          <AppShell>{children}</AppShell>
+          <Suspense fallback={<div className="min-h-screen bg-[#F7F6EF]" />}>
+            <AppShell>{children}</AppShell>
+          </Suspense>
         </PethriProvider>
       </body>
     </html>

@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import {
+  Calendar,
   Clock,
   MapPin,
   Megaphone,
@@ -9,20 +10,34 @@ import {
   PlusCircle,
   ShieldCheck,
   Store,
+  Users,
 } from "lucide-react";
 import { usePethri } from "@/components/PethriProvider";
+import { StaggerGroup, StaggerItem } from "@/components/MotionPrimitives";
 import { RelativeTime } from "@/components/RelativeTime";
-import { cn } from "@/lib/utils";
-import type { CommunityAnnouncement, LocalBusiness } from "@/types/pethri";
+import { CATEGORY_META, cn } from "@/lib/utils";
+import type {
+  CommunityAnnouncement,
+  LocalBusiness,
+  LocalEvent,
+} from "@/types/pethri";
 
-export default function DirectoryPage() {
-  const { localities, activeLocalityId, setActiveLocalityId, currentUser, showToast } =
-    usePethri();
+export default function DirectoryAndEventsPage() {
+  const {
+    localities,
+    activeLocalityId,
+    setActiveLocalityId,
+    currentUser,
+    showToast,
+  } = usePethri();
   const [businesses, setBusinesses] = useState<LocalBusiness[]>([]);
   const [announcements, setAnnouncements] = useState<CommunityAnnouncement[]>(
     []
   );
-  const [tab, setTab] = useState<"businesses" | "announcements">("businesses");
+  const [events, setEvents] = useState<LocalEvent[]>([]);
+  const [tab, setTab] = useState<"events" | "businesses" | "announcements">(
+    "events"
+  );
   const [newTitle, setNewTitle] = useState("");
   const [newSummary, setNewSummary] = useState("");
   const [newIssuer, setNewIssuer] = useState("Pethri Parish / Panchayat Desk");
@@ -39,7 +54,32 @@ export default function DirectoryPage() {
         setBusinesses(d.businesses ?? []);
         setAnnouncements(d.announcements ?? []);
       });
+    fetch(`/api/broadcast${param}`)
+      .then((r) => r.json())
+      .then((d) => {
+        if (Array.isArray(d.events)) setEvents(d.events);
+      });
   }, [activeLocalityId]);
+
+  const handleEventRsvp = async (eventId: string) => {
+    const res = await fetch("/api/broadcast", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "toggle_event_rsvp", eventId }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      setEvents((prev) =>
+        prev.map((e) => (e.id === eventId ? data.event : e))
+      );
+      showToast(
+        data.event.rsvpedByMe
+          ? "RSVP confirmed for event"
+          : "RSVP cancelled",
+        "info"
+      );
+    }
+  };
 
   const handlePublishAnnouncement = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -70,13 +110,24 @@ export default function DirectoryPage() {
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="text-xs font-bold uppercase tracking-wider text-[#D91E2A]">
-            Local Economy &amp; Civic Bulletins
+            Locality Communities &amp; Local Economy
           </p>
           <h1 className="font-display text-2xl sm:text-3xl font-extrabold text-[#0A2E6E]">
-            Business Directory &amp; Community Announcements
+            Events, Business Directory &amp; Notices
           </h1>
         </div>
-        <div className="flex items-center gap-2 rounded-full border border-slate-200 bg-white p-1">
+        <div className="flex flex-wrap items-center gap-1.5 rounded-full border border-slate-200 bg-white p-1">
+          <button
+            type="button"
+            onClick={() => setTab("events")}
+            className={cn(
+              "inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-xs font-bold transition-colors",
+              tab === "events" ? "bg-[#0A2E6E] text-white" : "text-slate-600"
+            )}
+          >
+            <Calendar className="h-3.5 w-3.5" />
+            Events ({events.length})
+          </button>
           <button
             type="button"
             onClick={() => setTab("businesses")}
@@ -101,12 +152,11 @@ export default function DirectoryPage() {
             )}
           >
             <Megaphone className="h-3.5 w-3.5" />
-            Announcements ({announcements.length})
+            Bulletins ({announcements.length})
           </button>
         </div>
       </div>
 
-      {/* Locality Filter Strip */}
       <div className="flex gap-2 overflow-x-auto no-scrollbar">
         <button
           type="button"
@@ -137,12 +187,66 @@ export default function DirectoryPage() {
         ))}
       </div>
 
-      {tab === "businesses" ? (
-        <div className="grid gap-5 md:grid-cols-2">
-          {businesses.map((biz) => (
+      {tab === "events" ? (
+        <StaggerGroup className="grid gap-4 md:grid-cols-3">
+          {events.map((evt) => (
+            <StaggerItem key={evt.id}>
             <div
-              key={biz.id}
-              className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-xs hover:shadow-md transition-shadow flex flex-col sm:flex-row"
+              className="h-full rounded-2xl border border-slate-200 bg-white p-5 flex flex-col justify-between"
+            >
+              <div>
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[11px] font-bold uppercase text-[#D91E2A]">
+                    {evt.localityName}
+                  </span>
+                  <span
+                    className={cn(
+                      "rounded-full border px-2 py-0.5 text-[10px] font-bold",
+                      CATEGORY_META[evt.category].pill
+                    )}
+                  >
+                    {CATEGORY_META[evt.category].short}
+                  </span>
+                </div>
+                <h2 className="mt-2 font-editorial text-2xl text-[#0B1426]">
+                  {evt.title}
+                </h2>
+                <p className="mt-2 flex items-center gap-1.5 text-xs text-slate-600">
+                  <MapPin className="h-3.5 w-3.5 text-[#D91E2A]" />
+                  {evt.venue}
+                </p>
+                <p className="mt-1 text-[11px] text-slate-500">
+                  Organizer: {evt.organizer}
+                </p>
+              </div>
+              <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-3">
+                <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-600">
+                  <Users className="h-4 w-4 text-[#0A2E6E]" />
+                  {evt.rsvpCount} attending
+                </span>
+                <button
+                  type="button"
+                  onClick={() => handleEventRsvp(evt.id)}
+                  className={cn(
+                    "rounded-full px-4 py-1.5 text-xs font-bold transition-colors",
+                    evt.rsvpedByMe
+                      ? "bg-[#0A2E6E] text-white"
+                      : "border border-[#0A2E6E] text-[#0A2E6E] hover:bg-[#0A2E6E] hover:text-white"
+                  )}
+                >
+                  {evt.rsvpedByMe ? "Going ✓" : "RSVP Going"}
+                </button>
+              </div>
+            </div>
+            </StaggerItem>
+          ))}
+        </StaggerGroup>
+      ) : tab === "businesses" ? (
+        <StaggerGroup className="grid gap-5 md:grid-cols-2">
+          {businesses.map((biz) => (
+            <StaggerItem key={biz.id}>
+            <div
+              className="h-full overflow-hidden rounded-2xl border border-slate-200 bg-white flex flex-col sm:flex-row"
             >
               {biz.imageUrl && (
                 <img
@@ -189,15 +293,16 @@ export default function DirectoryPage() {
                 </div>
               </div>
             </div>
+            </StaggerItem>
           ))}
-        </div>
+        </StaggerGroup>
       ) : (
         <div className="grid gap-6 lg:grid-cols-12 items-start">
           <div className="lg:col-span-8 space-y-4">
             {announcements.map((ann) => (
               <div
                 key={ann.id}
-                className="rounded-3xl border border-slate-200 bg-white p-5 shadow-xs"
+                className="rounded-2xl border border-slate-200 bg-white p-5"
               >
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="flex items-center gap-2">
@@ -232,15 +337,14 @@ export default function DirectoryPage() {
             ))}
           </div>
 
-          <aside className="lg:col-span-4 rounded-3xl border border-slate-200 bg-white p-5 shadow-xs">
+          <aside className="lg:col-span-4 rounded-2xl border border-slate-200 bg-white p-5">
             <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#0A2E6E]">
               <PlusCircle className="h-4 w-4 text-[#D91E2A]" />
               <span>Post Civic Notice</span>
             </div>
             <p className="mt-1 text-[11px] text-slate-500">
-              {currentUser.role === "editor" || currentUser.role === "admin"
-                ? "Signed in as Editorial Staff — publish notices immediately."
-                : "Switch to Editorial Desk role in the header to publish official notices (or test in demo mode)."}
+              Signed in as <strong>{currentUser.fullName}</strong> (
+              {currentUser.role}).
             </p>
             <form
               onSubmit={handlePublishAnnouncement}

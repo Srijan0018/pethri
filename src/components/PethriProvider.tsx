@@ -1,6 +1,8 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useState } from "react";
+import { MotionConfig } from "framer-motion";
+import { getDictionary, type LanguageCode, type TranslationDictionary } from "@/lib/i18n";
 import { DEMO_LOCALITIES, DEMO_NOTIFICATIONS, DEMO_PROFILES } from "@/lib/seed-data";
 import { createSupabaseBrowserClient, isSupabaseConfigured } from "@/lib/supabase/client";
 import type { Locality, NotificationItem, UserProfile } from "@/types/pethri";
@@ -22,6 +24,11 @@ interface PethriContextValue {
   unreadCount: number;
   markNotificationsRead: () => Promise<void>;
   refreshNotifications: () => Promise<void>;
+  language: LanguageCode;
+  setLanguage: (lang: LanguageCode) => void;
+  dict: TranslationDictionary;
+  privacyLocalityOnlyDefault: boolean;
+  setPrivacyLocalityOnlyDefault: (v: boolean) => void;
   supabaseReady: boolean;
   nowMs: number | null;
   toast: ToastMessage | null;
@@ -33,12 +40,19 @@ const PethriContext = createContext<PethriContextValue | null>(null);
 export function PethriProvider({ children }: { children: React.ReactNode }) {
   const [localities, setLocalities] = useState<Locality[]>(DEMO_LOCALITIES);
   const [activeLocalityId, setActiveLocalityId] = useState<string>("all");
-  const [currentUser, setCurrentUser] = useState<UserProfile>(DEMO_PROFILES[1]); // Kavitha (Citizen) default; switchable in UI
+  const [currentUser, setCurrentUser] = useState<UserProfile>(
+    DEMO_PROFILES.find((p) => p.id === "user-kavitha") ?? DEMO_PROFILES[0]
+  );
   const [notifications, setNotifications] =
     useState<NotificationItem[]>(DEMO_NOTIFICATIONS);
+  const [language, setLanguage] = useState<LanguageCode>("en");
+  const [privacyLocalityOnlyDefault, setPrivacyLocalityOnlyDefault] =
+    useState<boolean>(true);
   const [toast, setToast] = useState<ToastMessage | null>(null);
   const [nowMs, setNowMs] = useState<number | null>(null);
   const supabaseReady = isSupabaseConfigured();
+
+  const dict = getDictionary(language);
 
   const showToast = (
     title: string,
@@ -64,7 +78,7 @@ export function PethriProvider({ children }: { children: React.ReactNode }) {
         }
       }
     } catch {
-      // Keep cached demo notifications cleanly
+      // Keep cached notifications cleanly
     }
   };
 
@@ -97,7 +111,10 @@ export function PethriProvider({ children }: { children: React.ReactNode }) {
     const found = DEMO_PROFILES.find((p) => p.id === userId);
     if (found) {
       setCurrentUser(found);
-      showToast(`Switched active demo profile to ${found.fullName} (${found.role})`, "info");
+      showToast(
+        `Switched active profile to ${found.fullName} (${found.role})`,
+        "info"
+      );
     }
   };
 
@@ -110,7 +127,7 @@ export function PethriProvider({ children }: { children: React.ReactNode }) {
         body: JSON.stringify({ action: "mark_notifications_read" }),
       });
     } catch {
-      // Local state already updated
+      // Updated locally
     }
   };
 
@@ -120,41 +137,48 @@ export function PethriProvider({ children }: { children: React.ReactNode }) {
   const unreadCount = notifications.filter((n) => !n.isRead).length;
 
   return (
-    <PethriContext.Provider
-      value={{
-        localities,
-        activeLocalityId,
-        setActiveLocalityId,
-        activeLocality,
-        currentUser,
-        switchDemoUser,
-        notifications,
-        unreadCount,
-        markNotificationsRead,
-        refreshNotifications,
-        supabaseReady,
-        nowMs,
-        toast,
-        showToast,
-      }}
-    >
-      {children}
-      {toast && (
-        <div className="fixed bottom-20 right-4 z-50 max-w-sm md:bottom-6">
-          <div
-            className={`rounded-2xl border px-4 py-3 text-sm font-medium shadow-2xl backdrop-blur-md transition-all ${
-              toast.tone === "error"
-                ? "border-red-300 bg-[#D91E2A] text-white"
-                : toast.tone === "info"
-                  ? "border-[#0A2E6E]/30 bg-[#0A2E6E] text-white"
-                  : "border-emerald-300 bg-emerald-700 text-white"
-            }`}
-          >
-            {toast.title}
+    <MotionConfig reducedMotion="user">
+      <PethriContext.Provider
+        value={{
+          localities,
+          activeLocalityId,
+          setActiveLocalityId,
+          activeLocality,
+          currentUser,
+          switchDemoUser,
+          notifications,
+          unreadCount,
+          markNotificationsRead,
+          refreshNotifications,
+          language,
+          setLanguage,
+          dict,
+          privacyLocalityOnlyDefault,
+          setPrivacyLocalityOnlyDefault,
+          supabaseReady,
+          nowMs,
+          toast,
+          showToast,
+        }}
+      >
+        {children}
+        {toast && (
+          <div className="fixed bottom-20 right-4 z-50 max-w-sm md:bottom-6">
+            <div
+              className={`rounded-xl border px-4 py-3 text-sm font-semibold shadow-2xl backdrop-blur-md transition-all ${
+                toast.tone === "error"
+                  ? "border-red-300 bg-red-600 text-white"
+                  : toast.tone === "info"
+                    ? "border-[#202820]/20 bg-[#202820] text-[#B7F36B]"
+                    : "border-[#202820]/15 bg-[#DCEBCB] text-[#202820]"
+              }`}
+            >
+              {toast.title}
+            </div>
           </div>
-        </div>
-      )}
-    </PethriContext.Provider>
+        )}
+      </PethriContext.Provider>
+    </MotionConfig>
   );
 }
 

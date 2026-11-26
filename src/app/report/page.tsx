@@ -21,10 +21,10 @@ import { CATEGORY_META, cn } from "@/lib/utils";
 import type { PostCategory, PostItem, PostMediaItem } from "@/types/pethri";
 
 const SAMPLE_PRESET_MEDIA = [
-  { label: "Town & Bus", url: "/images/scenes/pethri-town.svg" },
-  { label: "Church Feast", url: "/images/scenes/church-feast.svg" },
-  { label: "Paddy Harvest", url: "/images/scenes/paddy-harvest.svg" },
-  { label: "Civic Road", url: "/images/scenes/civic-road.svg" },
+  { label: "Town & Bus", url: "/images/photos/pethri-town.jpg" },
+  { label: "Church Feast", url: "/images/photos/church-feast.jpg" },
+  { label: "Paddy Harvest", url: "/images/photos/paddy-harvest.jpg" },
+  { label: "Civic Road", url: "/images/photos/civic-road.jpg" },
 ];
 
 function ReporterContent() {
@@ -44,7 +44,7 @@ function ReporterContent() {
   const [mediaItems, setMediaItems] = useState<Omit<PostMediaItem, "id">[]>([
     {
       mediaType: "image",
-      url: "/images/scenes/pethri-town.svg",
+      url: "/images/photos/pethri-town.jpg",
       aspectRatio: "16:9",
       caption: "Captured in Pethri",
     },
@@ -347,7 +347,7 @@ function ReporterContent() {
         className="grid gap-6 lg:grid-cols-12 items-start"
       >
         {/* STEP 1: Media Capture / Upload */}
-        <div className="lg:col-span-5 space-y-4 rounded-3xl border border-slate-200 bg-white p-5 shadow-xs">
+        <div className="lg:col-span-5 space-y-4 rounded-xl border border-slate-200 bg-white p-5">
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-extrabold text-[#0A2E6E]">
               1. Photo or Short Video
@@ -518,7 +518,7 @@ function ReporterContent() {
         </div>
 
         {/* STEP 2: Story Details & Privacy-First Location */}
-        <div className="lg:col-span-7 space-y-4 rounded-3xl border border-slate-200 bg-white p-5 shadow-xs">
+        <div className="lg:col-span-7 space-y-4 rounded-xl border border-slate-200 bg-white p-5">
           <h2 className="text-sm font-extrabold text-[#0A2E6E]">
             2. Headline, Locality &amp; Privacy
           </h2>
@@ -645,15 +645,15 @@ function ReporterContent() {
             </div>
           </div>
 
-          <div className="flex items-center justify-between border-t border-slate-100 pt-4">
-            <div className="flex items-center gap-1.5 text-[11px] text-slate-500">
+          <div className="flex items-center justify-between border-t border-[#202820]/10 pt-4">
+            <div className="flex items-center gap-1.5 text-[11px] text-[#525F52]">
               <ShieldAlert className="h-4 w-4 text-amber-600" />
               <span>Posting as {currentUser.fullName}</span>
             </div>
             <button
               type="submit"
               disabled={submitting || !headline.trim() || !body.trim()}
-              className="rounded-full bg-[#D91E2A] px-6 py-3 text-xs font-bold text-white shadow-lg shadow-[#D91E2A]/25 hover:bg-[#B81621] disabled:opacity-50"
+              className="rounded-full bg-[#202820] px-6 py-3 text-xs font-extrabold text-[#B7F36B] hover:opacity-90 disabled:opacity-50"
             >
               {submitting ? "Submitting..." : "Submit for Editorial Review"}
             </button>

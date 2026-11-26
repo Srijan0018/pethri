@@ -1,6 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createCitizenPost, listPosts } from "@/lib/store";
-import type { PostCategory, PostFormat, VerificationTier } from "@/types/pethri";
+import {
+  createCitizenPost,
+  createNewsroomDispatch,
+  listPosts,
+} from "@/lib/store";
+import type {
+  PostCategory,
+  PostFormat,
+  PostSourceKind,
+  VerificationTier,
+} from "@/types/pethri";
 
 export async function GET(req: NextRequest) {
   const { searchParams } = req.nextUrl;
@@ -11,6 +20,10 @@ export async function GET(req: NextRequest) {
   const verification = (searchParams.get("verification") ?? "all") as
     | VerificationTier
     | "all";
+  const sourceKind = (searchParams.get("sourceKind") ?? "all") as
+    | PostSourceKind
+    | "all";
+  const playlistSlug = searchParams.get("playlistSlug") ?? undefined;
   const search = searchParams.get("search") ?? undefined;
   const onlyMoments = searchParams.get("moments") === "true";
   const includePending = searchParams.get("includePending") === "true";
@@ -20,6 +33,8 @@ export async function GET(req: NextRequest) {
     locality,
     category,
     verification,
+    sourceKind,
+    playlistSlug,
     search,
     onlyMoments,
     includePending,
@@ -51,6 +66,32 @@ export async function POST(req: NextRequest) {
             ? "photo"
             : "dispatch");
 
+    // Authorized Newsroom Publishing (Official Dispatches, Breaking News, Sponsored Partner notices)
+    if (body.publishMode === "newsroom" || body.publishMode === "sponsored") {
+      const result = createNewsroomDispatch({
+        authorId: body.authorId,
+        localityId: body.localityId,
+        category: body.category,
+        format,
+        sourceKind:
+          body.publishMode === "sponsored" ? "sponsored" : "newsroom",
+        sponsorInfo: body.sponsorInfo,
+        headline: body.headline,
+        body: body.body,
+        isBreaking: Boolean(body.isBreaking),
+        isMoment: Boolean(body.isMoment),
+        playlistSlug: body.playlistSlug,
+        approxLandmark: body.approxLandmark,
+        media,
+      });
+
+      if (result.error) {
+        return NextResponse.json({ error: result.error }, { status: 403 });
+      }
+      return NextResponse.json({ post: result.post }, { status: 201 });
+    }
+
+    // Standard Citizen Submission: ALWAYS community + pending + non-breaking
     const post = await createCitizenPost({
       authorId: body.authorId,
       authorName: body.authorName,

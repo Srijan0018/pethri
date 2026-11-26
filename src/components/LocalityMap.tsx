@@ -31,7 +31,6 @@ export function LocalityMap({
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         const { latitude, longitude } = pos.coords;
-        // Find nearest locality by Euclidean approximation on local belt
         let closest = localities[0];
         let minDist = Infinity;
         for (const loc of localities) {
@@ -55,7 +54,7 @@ export function LocalityMap({
       () => {
         setLocating(false);
         setGpsStatus(
-          "Location permission declined — browse manually by selecting any locality pin."
+          "Location permission declined — browse manually by selecting any Karavali pin."
         );
       },
       { enableHighAccuracy: false, timeout: 8000 }
@@ -63,23 +62,22 @@ export function LocalityMap({
   };
 
   return (
-    <div className="overflow-hidden rounded-3xl border border-slate-200 bg-[#06183B] text-white shadow-xl">
-      {/* Map Header Controls */}
+    <div className="overflow-hidden rounded-3xl border border-[#202820]/15 bg-[#202820] text-[#F7F6EF]">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 px-5 py-3.5">
         <div>
-          <p className="text-xs font-bold uppercase tracking-wider text-amber-300">
-            Interactive Pethri Belt Map
+          <p className="font-mono text-[11px] font-bold uppercase tracking-widest text-[#B7F36B]">
+            Interactive Karavali Belt Map
           </p>
-          <p className="text-[11px] text-slate-300">
-            Tap a locality node to filter dispatches. Exact coordinates stay
-            private unless explicitly consented.
+          <p className="text-[11px] text-[#C9E8D5]">
+            Tap Mangaluru, Udupi, Manipal, Kundapura, or Pethri to filter local
+            stories.
           </p>
         </div>
         <button
           type="button"
           onClick={handleUseMyLocation}
           disabled={locating}
-          className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-[#D91E2A] transition-colors disabled:opacity-60"
+          className="inline-flex items-center gap-1.5 rounded-full bg-[#B7F36B] px-3.5 py-1.5 text-xs font-extrabold text-[#202820] hover:bg-[#DCEBCB] transition-colors disabled:opacity-60"
         >
           <LocateFixed className="h-3.5 w-3.5" />
           <span>{locating ? "Locating..." : "Find Nearest Locality"}</span>
@@ -87,77 +85,52 @@ export function LocalityMap({
       </div>
 
       {gpsStatus && (
-        <div className="flex items-center gap-2 bg-[#0A2E6E] px-5 py-2 text-[11px] text-amber-200 border-b border-white/10">
+        <div className="flex items-center gap-2 bg-[#DCEBCB] px-5 py-2 text-[11px] font-semibold text-[#202820]">
           <Shield className="h-3.5 w-3.5 shrink-0" />
           <span>{gpsStatus}</span>
         </div>
       )}
 
-      {/* Bespoke Interactive Cartographic Canvas */}
-      <div className="relative h-[380px] sm:h-[440px] w-full overflow-hidden bg-gradient-to-br from-[#071D49] via-[#0A2E6E] to-[#06183B]">
-        {/* Topographic & River SVG Layer */}
+      <div className="relative h-[400px] sm:h-[460px] w-full overflow-hidden bg-[#202820] bg-forest-grid">
         <svg
           viewBox="0 0 1000 500"
           preserveAspectRatio="none"
-          className="absolute inset-0 h-full w-full opacity-55"
+          className="absolute inset-0 h-full w-full opacity-75"
           aria-hidden="true"
         >
-          {/* Lat/Lng Grid */}
-          <g stroke="rgba(255,255,255,0.08)" strokeWidth="1">
-            <line x1="0" y1="100" x2="1000" y2="100" />
-            <line x1="0" y1="200" x2="1000" y2="200" />
-            <line x1="0" y1="300" x2="1000" y2="300" />
-            <line x1="0" y1="400" x2="1000" y2="400" />
-            <line x1="200" y1="0" x2="200" y2="500" />
-            <line x1="400" y1="0" x2="400" y2="500" />
-            <line x1="600" y1="0" x2="600" y2="500" />
-            <line x1="800" y1="0" x2="800" y2="500" />
-          </g>
-          {/* Seetha & Coastal River Curves */}
+          {/* Arabian Sea Coastline Silhouette on Left */}
           <path
-            d="M0 165 Q230 115 410 190 T760 175 T1000 220"
-            stroke="#38BDF8"
-            strokeWidth="10"
-            strokeLinecap="round"
-            fill="none"
-            opacity="0.35"
+            d="M0 0 L175 0 Q140 130 165 250 T210 500 L0 500 Z"
+            fill="#C9E8D5"
+            opacity="0.14"
           />
+          {/* Coastal NH-66 Highway Line */}
           <path
-            d="M120 500 Q260 360 460 350 T850 430"
-            stroke="#38BDF8"
-            strokeWidth="6"
-            strokeLinecap="round"
-            fill="none"
-            opacity="0.25"
-          />
-          {/* Highway / Road Network Connecting Localities */}
-          <path
-            d="M240 280 L520 230 L720 180 L820 100"
-            stroke="#FDE68A"
-            strokeWidth="2.5"
+            d="M240 80 L280 150 L380 310 L620 420"
+            stroke="#B7F36B"
+            strokeWidth="3"
             strokeDasharray="8 6"
             fill="none"
-            opacity="0.55"
+            opacity="0.6"
           />
+          {/* Interior Pethri–Brahmavar–Manipal Link */}
           <path
-            d="M200 140 L240 280 L400 315 L540 390"
-            stroke="#FDE68A"
+            d="M320 230 L540 210 L680 290 L380 310"
+            stroke="#DCEBCB"
             strokeWidth="2"
-            strokeDasharray="6 6"
+            strokeDasharray="5 5"
             fill="none"
             opacity="0.45"
           />
         </svg>
 
-        {/* Compass Badge */}
-        <div className="absolute left-4 top-4 rounded-xl border border-white/15 bg-black/30 px-3 py-1.5 backdrop-blur-md text-[10px] font-mono text-slate-200">
+        <div className="absolute left-4 top-4 rounded-full border border-white/15 bg-black/40 px-3 py-1 backdrop-blur-md text-[10px] font-mono text-[#C9E8D5]">
           <div className="flex items-center gap-1.5">
-            <Navigation className="h-3 w-3 text-[#D91E2A]" />
-            <span>UDUPI • BRAHMAVAR TALUK • 13.44°N 74.80°E</span>
+            <Navigation className="h-3 w-3 text-[#B7F36B]" />
+            <span>KARAVALI COAST • 12.91°N – 13.62°N</span>
           </div>
         </div>
 
-        {/* Locality Interactive Nodes */}
         {localities.map((loc) => {
           const locPosts = posts.filter((p) => p.localityId === loc.id);
           const isSelected = selectedLocalityId === loc.id;
@@ -167,50 +140,26 @@ export function LocalityMap({
             <button
               key={loc.id}
               type="button"
-              onClick={() =>
-                onSelectLocality(isSelected ? "all" : loc.id)
-              }
+              onClick={() => onSelectLocality(isSelected ? "all" : loc.id)}
               style={{ left: `${loc.mapX}%`, top: `${loc.mapY}%` }}
               className="group absolute -translate-x-1/2 -translate-y-1/2 focus:outline-none z-10"
             >
-              {/* Pulse Ring */}
               {(isSelected || loc.isPrimary || hasBreaking) && (
-                <span
-                  className={cn(
-                    "absolute inset-0 -m-2 rounded-full animate-ping opacity-40",
-                    hasBreaking || isSelected ? "bg-[#D91E2A]" : "bg-amber-300"
-                  )}
-                />
+                <span className="absolute inset-0 -m-2 rounded-full animate-ping bg-[#B7F36B] opacity-35" />
               )}
               <div
                 className={cn(
-                  "relative flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold shadow-lg transition-all group-hover:scale-105",
+                  "relative flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-extrabold shadow-lg transition-all group-hover:scale-105",
                   isSelected
-                    ? "bg-[#D91E2A] text-white ring-4 ring-white/30 scale-110"
+                    ? "bg-[#B7F36B] text-[#202820] ring-4 ring-white/25 scale-110"
                     : loc.isPrimary
-                      ? "bg-white text-[#0A2E6E] ring-2 ring-[#D91E2A]"
-                      : "bg-[#06183B]/90 text-white border border-white/25 hover:bg-white hover:text-[#0A2E6E]"
+                      ? "bg-[#DCEBCB] text-[#202820]"
+                      : "bg-[#202820]/90 text-[#F7F6EF] border border-[#C9E8D5]/30 hover:bg-[#B7F36B] hover:text-[#202820]"
                 )}
               >
-                <MapPin
-                  className={cn(
-                    "h-3.5 w-3.5 shrink-0",
-                    isSelected
-                      ? "text-white"
-                      : loc.isPrimary
-                        ? "text-[#D91E2A]"
-                        : "text-amber-300"
-                  )}
-                />
+                <MapPin className="h-3.5 w-3.5 shrink-0" />
                 <span>{loc.name}</span>
-                <span
-                  className={cn(
-                    "rounded-full px-1.5 py-0.5 text-[10px]",
-                    isSelected
-                      ? "bg-white/20 text-white"
-                      : "bg-slate-900/15 text-current"
-                  )}
-                >
+                <span className="rounded-full bg-black/15 px-1.5 py-0.5 text-[10px]">
                   {locPosts.length}
                 </span>
               </div>
@@ -218,7 +167,6 @@ export function LocalityMap({
           );
         })}
 
-        {/* Consented Precise Coordinate Pins */}
         {posts
           .filter((p) => p.sharePreciseLocation && p.publicLat)
           .map((p) => {
@@ -228,11 +176,11 @@ export function LocalityMap({
               <div
                 key={`gps-${p.id}`}
                 style={{
-                  left: `${Math.min(92, loc.mapX + 6)}%`,
+                  left: `${Math.min(92, loc.mapX + 7)}%`,
                   top: `${Math.min(88, loc.mapY + 6)}%`,
                 }}
                 title={`Consented GPS Report: ${p.headline}`}
-                className="absolute -translate-x-1/2 -translate-y-1/2 rounded-lg border border-emerald-300/60 bg-emerald-600/90 px-2 py-0.5 text-[9px] font-bold text-white shadow-md"
+                className="absolute -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#C9E8D5] px-2.5 py-0.5 text-[9px] font-extrabold text-[#202820] shadow-md"
               >
                 GPS • {CATEGORY_META[p.category].short}
               </div>
@@ -240,19 +188,18 @@ export function LocalityMap({
           })}
       </div>
 
-      {/* Bottom Locality Quick Bar */}
-      <div className="flex items-center gap-2 overflow-x-auto no-scrollbar bg-[#05122D] px-4 py-3">
+      <div className="flex items-center gap-2 overflow-x-auto no-scrollbar bg-[#171E17] px-4 py-3">
         <button
           type="button"
           onClick={() => onSelectLocality("all")}
           className={cn(
-            "shrink-0 rounded-full px-3.5 py-1 text-xs font-semibold transition-colors",
+            "shrink-0 rounded-full px-3.5 py-1 text-xs font-bold transition-colors",
             selectedLocalityId === "all"
-              ? "bg-white text-[#0A2E6E]"
-              : "bg-white/10 text-slate-300 hover:bg-white/20"
+              ? "bg-[#B7F36B] text-[#202820]"
+              : "bg-white/10 text-[#C9E8D5] hover:bg-white/20"
           )}
         >
-          All Localities ({posts.length})
+          All Karavali ({posts.length})
         </button>
         {localities.map((loc) => {
           const count = posts.filter((p) => p.localityId === loc.id).length;
@@ -262,10 +209,10 @@ export function LocalityMap({
               type="button"
               onClick={() => onSelectLocality(loc.id)}
               className={cn(
-                "shrink-0 rounded-full px-3.5 py-1 text-xs font-semibold transition-colors",
+                "shrink-0 rounded-full px-3.5 py-1 text-xs font-bold transition-colors",
                 selectedLocalityId === loc.id
-                  ? "bg-[#D91E2A] text-white"
-                  : "bg-white/10 text-slate-300 hover:bg-white/20"
+                  ? "bg-[#B7F36B] text-[#202820]"
+                  : "bg-white/10 text-[#C9E8D5] hover:bg-white/20"
               )}
             >
               {loc.name} ({count})
