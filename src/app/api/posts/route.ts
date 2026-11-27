@@ -26,8 +26,9 @@ export async function GET(req: NextRequest) {
   const playlistSlug = searchParams.get("playlistSlug") ?? undefined;
   const search = searchParams.get("search") ?? undefined;
   const onlyMoments = searchParams.get("moments") === "true";
-  const includePending = searchParams.get("includePending") === "true";
+  const requestedPending = searchParams.get("includePending") === "true";
   const authorId = searchParams.get("authorId") ?? undefined;
+  const actorId = req.headers.get("x-pethri-actor-id") ?? undefined;
 
   const result = await listPosts({
     locality,
@@ -37,8 +38,9 @@ export async function GET(req: NextRequest) {
     playlistSlug,
     search,
     onlyMoments,
-    includePending,
+    includePending: requestedPending,
     authorId,
+    viewerId: actorId,
   });
 
   return NextResponse.json(result);

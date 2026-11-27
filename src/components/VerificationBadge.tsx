@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import { CheckCircle2, Clock, ShieldCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { VerificationTier } from "@/types/pethri";
@@ -20,24 +21,24 @@ const TRUST_STYLES: Record<
     shortLabel: "Community",
     description:
       "Submitted by a Karavali resident. Clearly kept separate from verified newsroom reporting.",
-    className: "bg-[#F7F6EF] text-[#525F52] border-[#202820]/20",
-    dotClass: "bg-amber-500",
+    className: "bg-[#F8F7F4] text-[#5A605C] border-[#E5E3DC]",
+    dotClass: "bg-[#5A605C]",
   },
   reviewed: {
     label: "Editorially Reviewed",
     shortLabel: "Reviewed",
     description:
       "Checked by a Pethri desk editor for locality context, authenticity, and privacy compliance.",
-    className: "bg-[#C9E8D5] text-[#202820] border-[#202820]/20",
-    dotClass: "bg-[#202820]",
+    className: "bg-white text-[#181917] border-[#398BFF]/40",
+    dotClass: "bg-[#398BFF]",
   },
   verified: {
     label: "Officially Verified",
     shortLabel: "Verified",
     description:
       "Confirmed directly with local authorities, parish/panchayat records, or accredited correspondents.",
-    className: "bg-[#B7F36B] text-[#202820] border-[#202820]/25",
-    dotClass: "bg-emerald-700",
+    className: "bg-[#EAF2EE] text-[#1B5E43] border-[#1B5E43]/25",
+    dotClass: "bg-[#1B5E43]",
   },
 };
 
@@ -71,29 +72,41 @@ export function VerificationBadge({
         onMouseLeave={() => setShowInfo(false)}
         aria-label={`${meta.label}: ${meta.description}`}
         className={cn(
-          "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[11px] font-bold transition-all hover:shadow-xs",
+          "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[11px] font-bold transition-all hover:border-[#398BFF]/60",
           meta.className,
           className
         )}
       >
-        <Icon className="h-3.5 w-3.5 shrink-0" />
+        <Icon
+          className={cn(
+            "h-3.5 w-3.5 shrink-0",
+            tier === "reviewed" && "text-[#398BFF]",
+            tier === "verified" && "text-[#1B5E43]"
+          )}
+        />
         <span>{compact ? meta.shortLabel : meta.label}</span>
       </button>
 
-      {showInfo && (
-        <div
-          role="tooltip"
-          className="absolute right-0 top-full z-40 mt-1.5 w-64 rounded-xl border border-[#202820]/15 bg-[#F7F6EF] p-3 text-left shadow-xl"
-        >
-          <div className="flex items-center gap-2 text-xs font-extrabold text-[#202820]">
-            <span className={cn("h-2 w-2 rounded-full", meta.dotClass)} />
-            {meta.label}
-          </div>
-          <p className="mt-1 text-[11px] leading-relaxed text-[#525F52]">
-            {meta.description}
-          </p>
-        </div>
-      )}
+      <AnimatePresence>
+        {showInfo && (
+          <motion.div
+            role="tooltip"
+            initial={{ opacity: 0, y: 6, scale: 0.96 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 4, scale: 0.97 }}
+            transition={{ type: "spring", stiffness: 460, damping: 32 }}
+            className="absolute right-0 top-full z-40 mt-1.5 w-64 origin-top-right rounded-xl border border-[#E5E3DC] bg-white p-3 text-left shadow-xl"
+          >
+            <div className="flex items-center gap-2 text-xs font-extrabold text-[#181917]">
+              <span className={cn("h-2 w-2 rounded-full", meta.dotClass)} />
+              {meta.label}
+            </div>
+            <p className="mt-1 text-[11px] leading-relaxed text-[#5A605C]">
+              {meta.description}
+            </p>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

@@ -6,14 +6,14 @@ import {
   CheckCircle2,
   Languages,
   Lock,
+  LogIn,
+  LogOut,
   MapPin,
-  ShieldCheck,
   UserCheck,
 } from "lucide-react";
 import { EditorialReveal } from "@/components/MotionPrimitives";
 import { usePethri } from "@/components/PethriProvider";
 import { LANGUAGE_OPTIONS } from "@/lib/i18n";
-import { DEMO_PROFILES } from "@/lib/seed-data";
 import { cn } from "@/lib/utils";
 
 export default function SettingsPage() {
@@ -26,36 +26,36 @@ export default function SettingsPage() {
     privacyLocalityOnlyDefault,
     setPrivacyLocalityOnlyDefault,
     currentUser,
-    switchDemoUser,
-    supabaseReady,
+    isAuthenticated,
+    signOut,
     showToast,
   } = usePethri();
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-8 space-y-6">
       <div>
-        <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-[#525F52]">
+        <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-[#1B5E43]">
           PREFERENCES &amp; REGIONAL SETUP
         </span>
-        <h1 className="mt-1 font-display text-3xl font-extrabold text-[#202820]">
+        <h1 className="mt-1 font-display text-3xl font-extrabold text-[#181917]">
           Pethri Settings
         </h1>
       </div>
 
       {/* 1. Karavali Language Support */}
       <EditorialReveal>
-        <section className="rounded-3xl border border-[#202820]/12 bg-white p-6 space-y-4">
+        <section className="rounded-3xl border border-[#E5E3DC] bg-white p-6 space-y-4">
           <div className="flex items-center gap-2.5">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#DCEBCB] text-[#202820]">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#EAF2EE] text-[#1B5E43]">
               <Languages className="h-4 w-4" />
             </div>
             <div>
-              <h2 className="font-display text-base font-extrabold text-[#202820]">
+              <h2 className="font-display text-base font-extrabold text-[#181917]">
                 Language &amp; Regional Script
               </h2>
-              <p className="text-xs text-[#525F52]">
+              <p className="text-xs text-[#5A605C]">
                 Switch between English and Kannada live. Architecture is ready
-                for Tulu and Konkani editions.
+                for Tulu and other Karavali editions.
               </p>
             </div>
           </div>
@@ -73,21 +73,21 @@ export default function SettingsPage() {
                 className={cn(
                   "rounded-2xl border p-4 text-left transition-all",
                   language === opt.code
-                    ? "border-[#202820] bg-[#DCEBCB] ring-2 ring-[#B7F36B]"
+                    ? "border-[#398BFF] bg-[#EAF2EE] ring-2 ring-[#398BFF]/25"
                     : opt.available
-                      ? "border-[#202820]/15 bg-[#F7F6EF] hover:border-[#202820]"
-                      : "border-dashed border-[#202820]/15 bg-[#F7F6EF]/50 opacity-65 cursor-not-allowed"
+                      ? "border-[#E5E3DC] bg-[#F8F7F4] hover:border-[#398BFF]"
+                      : "border-dashed border-[#E5E3DC] bg-[#F8F7F4]/50 opacity-65 cursor-not-allowed"
                 )}
               >
                 <div className="flex items-center justify-between">
-                  <span className="font-bold text-sm text-[#202820]">
+                  <span className="font-bold text-sm text-[#181917]">
                     {opt.nativeLabel}
                   </span>
                   {language === opt.code && (
-                    <CheckCircle2 className="h-4 w-4 text-[#202820]" />
+                    <CheckCircle2 className="h-4 w-4 text-[#398BFF]" />
                   )}
                 </div>
-                <p className="mt-1 text-[11px] text-[#525F52]">{opt.label}</p>
+                <p className="mt-1 text-[11px] text-[#5A605C]">{opt.label}</p>
               </button>
             ))}
           </div>
@@ -96,17 +96,17 @@ export default function SettingsPage() {
 
       {/* 2. Home Karavali Locality */}
       <EditorialReveal delay={0.05}>
-        <section className="rounded-3xl border border-[#202820]/12 bg-white p-6 space-y-4">
+        <section className="rounded-3xl border border-[#E5E3DC] bg-white p-6 space-y-4">
           <div className="flex items-center gap-2.5">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#C9E8D5] text-[#202820]">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#EAF2EE] text-[#1B5E43]">
               <MapPin className="h-4 w-4" />
             </div>
             <div>
-              <h2 className="font-display text-base font-extrabold text-[#202820]">
+              <h2 className="font-display text-base font-extrabold text-[#181917]">
                 Default Karavali Locality Feed
               </h2>
-              <p className="text-xs text-[#525F52]">
-                Choose your primary city or ward across Mangaluru, Udupi,
+              <p className="text-xs text-[#5A605C]">
+                Choose your preferred city or ward across Mangaluru, Udupi,
                 Manipal, Kundapura, and Pethri.
               </p>
             </div>
@@ -117,10 +117,10 @@ export default function SettingsPage() {
               type="button"
               onClick={() => setActiveLocalityId("all")}
               className={cn(
-                "rounded-full px-4 py-2 text-xs font-bold transition-colors",
+                "rounded-full px-4 py-2 text-xs font-bold border transition-colors",
                 activeLocalityId === "all"
-                  ? "bg-[#202820] text-[#B7F36B]"
-                  : "bg-[#F7F6EF] text-[#202820] border border-[#202820]/15"
+                  ? "bg-[#1B5E43] border-[#1B5E43] text-white"
+                  : "bg-[#F8F7F4] text-[#181917] border-[#E5E3DC] hover:border-[#398BFF]"
               )}
             >
               All Karavali
@@ -131,10 +131,10 @@ export default function SettingsPage() {
                 type="button"
                 onClick={() => setActiveLocalityId(loc.id)}
                 className={cn(
-                  "rounded-full px-4 py-2 text-xs font-bold transition-colors",
+                  "rounded-full px-4 py-2 text-xs font-bold border transition-colors",
                   activeLocalityId === loc.id
-                    ? "bg-[#B7F36B] text-[#202820] border border-[#202820]/25"
-                    : "bg-[#F7F6EF] text-[#202820] border border-[#202820]/15"
+                    ? "bg-[#398BFF] border-[#398BFF] text-white"
+                    : "bg-[#F8F7F4] text-[#181917] border-[#E5E3DC] hover:border-[#398BFF]"
                 )}
               >
                 {loc.name}
@@ -144,21 +144,21 @@ export default function SettingsPage() {
         </section>
       </EditorialReveal>
 
-      {/* 3. Privacy & Location Consent */}
+      {/* 3. Privacy Default */}
       <EditorialReveal delay={0.08}>
-        <section className="rounded-3xl border border-[#202820]/12 bg-white p-6 space-y-3">
+        <section className="rounded-3xl border border-[#E5E3DC] bg-white p-6 space-y-3">
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-2.5">
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#F7F6EF] border border-[#202820]/15 text-[#202820]">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#F8F7F4] border border-[#E5E3DC] text-[#1B5E43]">
                 <Lock className="h-4 w-4" />
               </div>
               <div>
-                <h2 className="font-display text-base font-extrabold text-[#202820]">
+                <h2 className="font-display text-base font-extrabold text-[#181917]">
                   Privacy-First GPS Default
                 </h2>
-                <p className="text-xs text-[#525F52]">
-                  Keep exact street GPS hidden on citizen uploads unless you
-                  explicitly consent per post.
+                <p className="text-xs text-[#5A605C]">
+                  Keep exact GPS hidden on private news tips unless you
+                  explicitly consent per submission.
                 </p>
               </div>
             </div>
@@ -169,70 +169,55 @@ export default function SettingsPage() {
                 showToast("Privacy default updated");
               }}
               className={cn(
-                "rounded-full px-4 py-1.5 text-xs font-extrabold transition-colors",
+                "rounded-full px-4 py-1.5 text-xs font-extrabold transition-colors border",
                 privacyLocalityOnlyDefault
-                  ? "bg-[#202820] text-[#B7F36B]"
-                  : "bg-[#DCEBCB] text-[#202820]"
+                  ? "bg-[#1B5E43] border-[#1B5E43] text-white"
+                  : "bg-[#EAF2EE] border-[#E5E3DC] text-[#1B5E43]"
               )}
             >
-              {privacyLocalityOnlyDefault ? "Locality-Only ON" : "Ask Every Post"}
+              {privacyLocalityOnlyDefault ? "Locality-Only ON" : "Ask Every Tip"}
             </button>
           </div>
         </section>
       </EditorialReveal>
 
-      {/* 4. Demo Role & Account Switcher */}
+      {/* 4. Public Member Session */}
       <EditorialReveal delay={0.1}>
-        <section className="rounded-3xl border border-[#202820]/12 bg-[#202820] p-6 text-[#F7F6EF] space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <UserCheck className="h-4 w-4 text-[#B7F36B]" />
-              <h2 className="font-display text-base font-extrabold">
-                Active Account &amp; Editorial Role
-              </h2>
+        <section className="rounded-3xl border border-[#E5E3DC] bg-[#1B5E43] p-6 text-white flex flex-wrap items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white text-[#1B5E43]">
+              <UserCheck className="h-5 w-5" />
             </div>
+            <div>
+              <h2 className="font-display text-base font-extrabold">
+                {isAuthenticated ? currentUser.fullName : "Visitor Mode"}
+              </h2>
+              <p className="text-xs text-[#EAF2EE]/85">
+                {isAuthenticated
+                  ? `Signed in as @${currentUser.username}`
+                  : "Sign in to comment, react, bookmark, and submit private news tips."}
+              </p>
+            </div>
+          </div>
+
+          {isAuthenticated ? (
+            <button
+              type="button"
+              onClick={signOut}
+              className="inline-flex items-center gap-2 rounded-full bg-white/15 px-5 py-2.5 text-xs font-bold text-white hover:bg-[#D94E34] transition-colors"
+            >
+              <LogOut className="h-4 w-4" />
+              Sign Out
+            </button>
+          ) : (
             <Link
               href="/auth"
-              className="text-xs font-bold text-[#B7F36B] underline"
+              className="inline-flex items-center gap-2 rounded-full bg-[#398BFF] px-5 py-2.5 text-xs font-extrabold text-white hover:bg-white hover:text-[#1B5E43] transition-colors"
             >
-              {supabaseReady ? "Supabase Auth" : "Sign In Page"}
+              <LogIn className="h-4 w-4" />
+              Sign In
             </Link>
-          </div>
-          <div className="grid gap-2.5 sm:grid-cols-2">
-            {DEMO_PROFILES.map((prof) => (
-              <button
-                key={prof.id}
-                type="button"
-                onClick={() => switchDemoUser(prof.id)}
-                className={cn(
-                  "flex items-center justify-between rounded-2xl border p-3 text-left transition-all",
-                  currentUser.id === prof.id
-                    ? "border-[#B7F36B] bg-white/15"
-                    : "border-white/10 bg-white/5 hover:bg-white/10"
-                )}
-              >
-                <div className="flex items-center gap-3 min-w-0">
-                  <img
-                    src={prof.avatarUrl}
-                    alt={prof.fullName}
-                    className="h-9 w-9 rounded-full object-cover"
-                  />
-                  <div className="min-w-0">
-                    <p className="text-xs font-bold truncate">{prof.fullName}</p>
-                    <p className="text-[11px] text-[#C9E8D5] truncate">
-                      {prof.homeLocalityName} • @{prof.username}
-                    </p>
-                  </div>
-                </div>
-                <span className="inline-flex items-center gap-1 rounded-full bg-[#B7F36B] px-2.5 py-0.5 text-[10px] font-extrabold uppercase text-[#202820]">
-                  {prof.isVerifiedReporter && (
-                    <ShieldCheck className="h-3 w-3" />
-                  )}
-                  {prof.role}
-                </span>
-              </button>
-            ))}
-          </div>
+          )}
         </section>
       </EditorialReveal>
     </div>

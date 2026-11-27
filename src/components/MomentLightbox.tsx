@@ -54,13 +54,13 @@ export function MomentLightbox({
       role="dialog"
       aria-modal="true"
       aria-label="Pethri Moment viewer"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/95 p-3"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-[#181917]/92 p-3 backdrop-blur-xs"
     >
       <button
         type="button"
         onClick={onClose}
         aria-label="Close moment viewer"
-        className="absolute right-4 top-4 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20"
+        className="absolute right-4 top-4 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-white/15 text-white hover:bg-[#398BFF] transition-colors"
       >
         <X className="h-5 w-5" />
       </button>
@@ -69,7 +69,7 @@ export function MomentLightbox({
         initial={{ opacity: 0, scale: 0.96 }}
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.96 }}
-        className="relative flex w-full max-w-md flex-col overflow-hidden rounded-2xl bg-[#202820] text-[#F7F6EF] shadow-2xl ring-1 ring-white/15 h-[84vh] max-h-[760px]"
+        className="relative flex w-full max-w-md flex-col overflow-hidden rounded-2xl bg-[#181917] text-white shadow-2xl ring-1 ring-white/15 h-[84vh] max-h-[760px]"
       >
         {/* Story Progress Bars */}
         <div className="flex gap-1.5 px-3 pt-3 z-10">
@@ -84,7 +84,7 @@ export function MomentLightbox({
               <div
                 className={cn(
                   "h-full rounded-full transition-all",
-                  idx <= index ? "w-full bg-white" : "w-0"
+                  idx <= index ? "w-full bg-[#398BFF]" : "w-0"
                 )}
               />
             </button>
@@ -97,14 +97,14 @@ export function MomentLightbox({
             <img
               src={current.author.avatarUrl}
               alt={current.author.fullName}
-              className="h-9 w-9 rounded-full object-cover ring-2 ring-[#B7F36B]"
+              className="h-9 w-9 rounded-full object-cover ring-2 ring-[#398BFF]"
             />
             <div className="min-w-0">
               <p className="text-xs font-bold truncate">
                 {current.author.fullName}
               </p>
-              <p className="flex items-center gap-1 text-[11px] text-[#C9E8D5]">
-                <MapPin className="h-3 w-3 text-[#B7F36B]" />
+              <p className="flex items-center gap-1 text-[11px] text-[#EAF2EE]">
+                <MapPin className="h-3 w-3 text-[#398BFF]" />
                 {current.localityName} • <RelativeTime iso={current.createdAt} />
               </p>
             </div>
@@ -157,7 +157,7 @@ export function MomentLightbox({
               type="button"
               aria-label="Previous moment"
               onClick={() => setIndex((i) => i - 1)}
-              className="absolute left-2 top-1/2 -translate-y-1/2 flex h-9 w-9 items-center justify-center rounded-full bg-black/50 text-white hover:bg-black/75"
+              className="absolute left-2 top-1/2 -translate-y-1/2 flex h-9 w-9 items-center justify-center rounded-full bg-black/55 text-white hover:bg-[#398BFF] transition-colors"
             >
               <ChevronLeft className="h-5 w-5" />
             </button>
@@ -167,7 +167,7 @@ export function MomentLightbox({
               type="button"
               aria-label="Next moment"
               onClick={() => setIndex((i) => i + 1)}
-              className="absolute right-2 top-1/2 -translate-y-1/2 flex h-9 w-9 items-center justify-center rounded-full bg-black/50 text-white hover:bg-black/75"
+              className="absolute right-2 top-1/2 -translate-y-1/2 flex h-9 w-9 items-center justify-center rounded-full bg-black/55 text-white hover:bg-[#398BFF] transition-colors"
             >
               <ChevronRight className="h-5 w-5" />
             </button>
@@ -178,7 +178,7 @@ export function MomentLightbox({
             <h3 className="font-editorial text-xl leading-snug text-white">
               {current.headline}
             </h3>
-            <p className="mt-1 line-clamp-2 text-xs text-slate-200">
+            <p className="mt-1 line-clamp-2 text-xs text-white/80">
               {current.body}
             </p>
             <div className="mt-3 flex items-center justify-between">
@@ -186,12 +186,12 @@ export function MomentLightbox({
                 <button
                   type="button"
                   onClick={() => onLike?.(current.id)}
-                  className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1.5 text-xs font-bold text-white hover:bg-[#D91E2A]"
+                  className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1.5 text-xs font-bold text-white hover:bg-[#398BFF] transition-colors"
                 >
                   <Heart
                     className={cn(
                       "h-4 w-4",
-                      current.likedByMe && "fill-[#D91E2A] text-[#D91E2A]"
+                      current.likedByMe && "fill-[#398BFF] text-[#398BFF]"
                     )}
                   />
                   <span>{current.likesCount}</span>
@@ -199,19 +199,15 @@ export function MomentLightbox({
                 <Link
                   href={`/article/${current.id}`}
                   onClick={onClose}
-                  className="inline-flex items-center gap-1 rounded-full bg-white/15 px-3 py-1.5 text-xs font-semibold text-white hover:bg-white/25"
+                  className="inline-flex items-center gap-1 rounded-full bg-[#1B5E43] px-3.5 py-1.5 text-xs font-extrabold text-white hover:bg-[#398BFF] transition-colors"
                 >
                   <Share2 className="h-3.5 w-3.5" />
                   <span>Read Full Article</span>
                 </Link>
               </div>
-              <Link
-                href="/report?mode=moment"
-                onClick={onClose}
-                className="rounded-full bg-[#B7F36B] px-3 py-1.5 text-xs font-extrabold text-[#202820]"
-              >
-                + Post Moment
-              </Link>
+              <span className="text-[10px] font-mono text-[#EAF2EE]">
+                {index + 1} / {moments.length}
+              </span>
             </div>
           </div>
         </motion.div>

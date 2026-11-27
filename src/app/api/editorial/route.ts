@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
   addPostCorrection,
+  isActorEditorialStaff,
+  listEditorialGovernanceLogs,
   listProfiles,
   listReports,
   resolveContentReport,
@@ -8,16 +10,34 @@ import {
   updateProfileGovernance,
 } from "@/lib/store";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const actorId = req.headers.get("x-pethri-actor-id") ?? undefined;
+  const logs = isActorEditorialStaff(actorId)
+    ? listEditorialGovernanceLogs()
+    : { articleRevisions: [], moderationLogs: [], permissionHistory: [] };
+
   return NextResponse.json({
-    reports: listReports(),
+    reports: isActorEditorialStaff(actorId) ? listReports() : [],
     profiles: listProfiles(),
+    ...logs,
   });
 }
 
 export async function PATCH(req: NextRequest) {
   try {
     const body = await req.json();
+    const actorId =
+      req.headers.get("x-pethri-actor-id") ?? body.reviewerId ?? body.actorId;
+
+    if (!isActorEditorialStaff(actorId)) {
+      return NextResponse.json(
+        {
+          error:
+            "Unauthorized: editorial desk operations require accredited staff authorization.",
+        },
+        { status: 403 }
+      );
+    }
 
     if (body.type === "post_review") {
       const updated = reviewRuntimePost(body.postId, {
@@ -25,7 +45,7 @@ export async function PATCH(req: NextRequest) {
         verificationTier: body.verificationTier,
         isBreaking: body.isBreaking,
         moderationNotes: body.moderationNotes,
-        reviewerId: body.reviewerId,
+        reviewerId: actorId,
       });
       if (!updated) {
         return NextResponse.json({ error: "Post not found" }, { status: 404 });
@@ -63,6 +83,7 @@ export async function PATCH(req: NextRequest) {
         role: body.role,
         isVerifiedReporter: body.isVerifiedReporter,
         isSuspended: body.isSuspended,
+        actorId,
       });
       if (!updated) {
         return NextResponse.json(

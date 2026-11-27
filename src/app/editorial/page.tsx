@@ -294,16 +294,16 @@ export default function EditorialDashboardPage() {
     return (
       <div className="mx-auto max-w-2xl px-4 py-12">
         <div className="rounded-2xl border border-amber-200 bg-white p-8 text-center">
-          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[#0A2E6E]/10 text-[#0A2E6E]">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[#1B5E43]/10 text-[#181917]">
             <Lock className="h-7 w-7" />
           </div>
-          <h1 className="mt-4 font-display text-2xl font-extrabold text-[#0A2E6E]">
+          <h1 className="mt-4 font-display text-2xl font-extrabold text-[#181917]">
             Authorized Newsroom Access Required
           </h1>
           <p className="mt-2 text-sm text-slate-600">
             You are signed in as{" "}
             <span className="font-bold">{currentUser.fullName}</span> (role:{" "}
-            <span className="font-bold uppercase text-[#D91E2A]">
+            <span className="font-bold uppercase text-[#D94E34]">
               {currentUser.role}
             </span>
             ). Only authorized Newsroom Journalists, Editors, and Admins can
@@ -312,21 +312,21 @@ export default function EditorialDashboardPage() {
           </p>
           {!supabaseReady && (
             <div className="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-4">
-              <p className="text-xs font-bold text-[#0A2E6E]">
+              <p className="text-xs font-bold text-[#181917]">
                 Demo Newsroom Switch
               </p>
               <div className="mt-3 flex flex-wrap justify-center gap-2">
                 <button
                   type="button"
                   onClick={() => switchDemoUser("user-editor")}
-                  className="rounded-full bg-[#0A2E6E] px-5 py-2 text-xs font-bold text-white hover:bg-[#08245B]"
+                  className="rounded-full bg-[#1B5E43] px-5 py-2 text-xs font-bold text-white hover:bg-[#08245B]"
                 >
                   Sign in as Newsroom Editor
                 </button>
                 <button
                   type="button"
                   onClick={() => switchDemoUser("user-ananya")}
-                  className="rounded-full border border-[#0A2E6E] px-5 py-2 text-xs font-bold text-[#0A2E6E] hover:bg-slate-100"
+                  className="rounded-full border border-[#1B5E43] px-5 py-2 text-xs font-bold text-[#181917] hover:bg-slate-100"
                 >
                   Sign in as Staff Journalist
                 </button>
@@ -342,10 +342,10 @@ export default function EditorialDashboardPage() {
     <div className="mx-auto max-w-7xl px-4 py-6 space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p className="text-xs font-bold uppercase tracking-wider text-[#D91E2A]">
+          <p className="text-xs font-bold uppercase tracking-wider text-[#D94E34]">
             Newsroom Governance &amp; Broadcast Control
           </p>
-          <h1 className="font-display text-2xl sm:text-3xl font-extrabold text-[#0A2E6E]">
+          <h1 className="font-display text-2xl sm:text-3xl font-extrabold text-[#181917]">
             Pethri Newsroom &amp; Editorial Desk
           </h1>
         </div>
@@ -354,7 +354,7 @@ export default function EditorialDashboardPage() {
             <Clock className="h-3.5 w-3.5" />
             {pendingCount} Pending Review
           </span>
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-red-100 px-3 py-1 font-bold text-[#D91E2A]">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-red-100 px-3 py-1 font-bold text-[#D94E34]">
             <Flag className="h-3.5 w-3.5" />
             {openReportsCount} Open Reports
           </span>
@@ -369,7 +369,7 @@ export default function EditorialDashboardPage() {
           className={cn(
             "inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-xs font-bold transition-colors",
             tab === "queue"
-              ? "bg-[#0A2E6E] text-white"
+              ? "bg-[#1B5E43] text-white"
               : "bg-white border border-slate-200 text-slate-700"
           )}
         >
@@ -382,7 +382,7 @@ export default function EditorialDashboardPage() {
           className={cn(
             "inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-xs font-bold transition-colors",
             tab === "publish"
-              ? "bg-[#D91E2A] text-white"
+              ? "bg-[#D94E34] text-white"
               : "bg-white border border-slate-200 text-slate-700"
           )}
         >
@@ -395,7 +395,7 @@ export default function EditorialDashboardPage() {
           className={cn(
             "inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-xs font-bold transition-colors",
             tab === "reports"
-              ? "bg-[#D91E2A] text-white"
+              ? "bg-[#D94E34] text-white"
               : "bg-white border border-slate-200 text-slate-700"
           )}
         >
@@ -408,7 +408,7 @@ export default function EditorialDashboardPage() {
           className={cn(
             "inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-xs font-bold transition-colors",
             tab === "users"
-              ? "bg-[#0A2E6E] text-white"
+              ? "bg-[#1B5E43] text-white"
               : "bg-white border border-slate-200 text-slate-700"
           )}
         >
@@ -427,10 +427,10 @@ export default function EditorialDashboardPage() {
             className="lg:col-span-7 rounded-2xl border border-slate-200 bg-white p-6 space-y-4"
           >
             <div className="flex items-center justify-between">
-              <h2 className="font-display text-lg font-extrabold text-[#0A2E6E]">
+              <h2 className="font-display text-lg font-extrabold text-[#181917]">
                 Official Newsroom &amp; Partner Publisher
               </h2>
-              <span className="rounded-full bg-[#0A2E6E] px-2.5 py-0.5 text-[10px] font-bold uppercase text-white">
+              <span className="rounded-full bg-[#1B5E43] px-2.5 py-0.5 text-[10px] font-bold uppercase text-white">
                 {currentUser.role}
               </span>
             </div>
@@ -442,7 +442,7 @@ export default function EditorialDashboardPage() {
                 className={cn(
                   "rounded-full px-4 py-1.5 text-xs font-bold",
                   pubMode === "newsroom"
-                    ? "bg-[#0A2E6E] text-white"
+                    ? "bg-[#1B5E43] text-white"
                     : "bg-slate-100 text-slate-700"
                 )}
               >
@@ -479,7 +479,7 @@ export default function EditorialDashboardPage() {
               value={pubHeadline}
               onChange={(e) => setPubHeadline(e.target.value)}
               placeholder="Headline *"
-              className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm outline-none focus:border-[#0A2E6E]"
+              className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm outline-none focus:border-[#1B5E43]"
             />
 
             <textarea
@@ -488,7 +488,7 @@ export default function EditorialDashboardPage() {
               value={pubBody}
               onChange={(e) => setPubBody(e.target.value)}
               placeholder="Full newsroom report or partner message *"
-              className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm outline-none focus:border-[#0A2E6E]"
+              className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm outline-none focus:border-[#1B5E43]"
             />
 
             <div className="grid gap-3 sm:grid-cols-2">
@@ -517,12 +517,12 @@ export default function EditorialDashboardPage() {
             </div>
 
             {pubMode === "newsroom" && (
-              <label className="flex items-center gap-2 text-xs font-bold text-[#D91E2A] cursor-pointer">
+              <label className="flex items-center gap-2 text-xs font-bold text-[#D94E34] cursor-pointer">
                 <input
                   type="checkbox"
                   checked={pubBreaking}
                   onChange={(e) => setPubBreaking(e.target.checked)}
-                  className="accent-[#D91E2A]"
+                  className="accent-[#D94E34]"
                 />
                 Publish as Official Breaking News Alert
               </label>
@@ -530,7 +530,7 @@ export default function EditorialDashboardPage() {
 
             <button
               type="submit"
-              className="rounded-full bg-[#D91E2A] px-6 py-2.5 text-xs font-bold text-white hover:bg-[#B81621]"
+              className="rounded-full bg-[#D94E34] px-6 py-2.5 text-xs font-bold text-white hover:bg-[#B81621]"
             >
               {pubMode === "sponsored"
                 ? "Publish Clearly Marked Sponsored Notice"
@@ -539,7 +539,7 @@ export default function EditorialDashboardPage() {
           </form>
 
           {/* Official Live Broadcast Control */}
-          <div className="lg:col-span-5 rounded-2xl border border-slate-200 bg-[#06183B] p-6 text-white space-y-4">
+          <div className="lg:col-span-5 rounded-2xl border border-slate-200 bg-[#1B5E43] p-6 text-white space-y-4">
             <div className="flex items-center justify-between">
               <span className="inline-flex items-center gap-1.5 text-xs font-extrabold uppercase tracking-wider text-amber-300">
                 <Radio className="h-4 w-4" />
@@ -549,7 +549,7 @@ export default function EditorialDashboardPage() {
                 className={cn(
                   "rounded px-2 py-0.5 text-[10px] font-extrabold uppercase",
                   broadcast?.isLive
-                    ? "bg-[#D91E2A] text-white"
+                    ? "bg-[#D94E34] text-white"
                     : "bg-white/15 text-slate-300"
                 )}
               >
@@ -574,7 +574,7 @@ export default function EditorialDashboardPage() {
               <button
                 type="button"
                 onClick={() => handleToggleBroadcast(true)}
-                className="flex-1 rounded-full bg-[#D91E2A] py-2.5 text-xs font-bold text-white hover:bg-[#B81621]"
+                className="flex-1 rounded-full bg-[#D94E34] py-2.5 text-xs font-bold text-white hover:bg-[#B81621]"
               >
                 Go Live Now
               </button>
@@ -599,7 +599,7 @@ export default function EditorialDashboardPage() {
                 className={cn(
                   "rounded-full px-3.5 py-1 text-xs font-bold capitalize",
                   statusFilter === s
-                    ? "bg-[#D91E2A] text-white"
+                    ? "bg-[#D94E34] text-white"
                     : "bg-white border border-slate-200 text-slate-600"
                 )}
               >
@@ -637,10 +637,10 @@ export default function EditorialDashboardPage() {
                     >
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <div className="flex items-center gap-2 text-xs">
-                          <span className="rounded bg-[#0A2E6E]/10 px-2 py-0.5 text-[10px] font-bold uppercase text-[#0A2E6E]">
+                          <span className="rounded bg-[#1B5E43]/10 px-2 py-0.5 text-[10px] font-bold uppercase text-[#181917]">
                             {post.sourceKind}
                           </span>
-                          <span className="font-bold text-[#D91E2A]">
+                          <span className="font-bold text-[#D94E34]">
                             {post.localityName}
                           </span>
                           <span className="rounded-full bg-slate-100 px-2 py-0.5 font-semibold text-slate-700">
@@ -654,7 +654,7 @@ export default function EditorialDashboardPage() {
                         <VerificationBadge tier={post.verificationTier} />
                       </div>
 
-                      <h2 className="font-editorial text-2xl text-[#0B1426]">
+                      <h2 className="font-editorial text-2xl text-[#181917]">
                         {post.headline}
                       </h2>
                       <p className="text-xs leading-relaxed text-slate-600">
@@ -674,7 +674,7 @@ export default function EditorialDashboardPage() {
                             }))
                           }
                           placeholder="Add verification source or editorial note..."
-                          className="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs outline-none focus:border-[#0A2E6E]"
+                          className="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs outline-none focus:border-[#1B5E43]"
                         />
 
                         <div className="flex flex-wrap gap-2">
@@ -692,7 +692,7 @@ export default function EditorialDashboardPage() {
                             onClick={() =>
                               handleReview(post.id, "approved", "reviewed")
                             }
-                            className="inline-flex items-center gap-1 rounded-full bg-[#0A2E6E] px-3.5 py-1.5 text-xs font-bold text-white hover:bg-[#08245B]"
+                            className="inline-flex items-center gap-1 rounded-full bg-[#1B5E43] px-3.5 py-1.5 text-xs font-bold text-white hover:bg-[#08245B]"
                           >
                             <CheckCircle2 className="h-3.5 w-3.5" />
                             Approve &amp; Mark Reviewed
@@ -717,7 +717,7 @@ export default function EditorialDashboardPage() {
                             onClick={() =>
                               handleReview(post.id, "rejected", "community")
                             }
-                            className="inline-flex items-center gap-1 rounded-full bg-red-50 px-3.5 py-1.5 text-xs font-bold text-[#D91E2A] hover:bg-red-100"
+                            className="inline-flex items-center gap-1 rounded-full bg-red-50 px-3.5 py-1.5 text-xs font-bold text-[#D94E34] hover:bg-red-100"
                           >
                             <XCircle className="h-3.5 w-3.5" />
                             Reject
@@ -741,7 +741,7 @@ export default function EditorialDashboardPage() {
                           <button
                             type="button"
                             onClick={() => handleLogCorrection(post.id)}
-                            className="inline-flex items-center gap-1 rounded-xl bg-[#0A2E6E] px-3 py-1.5 text-xs font-bold text-white"
+                            className="inline-flex items-center gap-1 rounded-xl bg-[#1B5E43] px-3 py-1.5 text-xs font-bold text-white"
                           >
                             <FileEdit className="h-3.5 w-3.5" />
                             Log Correction
@@ -773,13 +773,13 @@ export default function EditorialDashboardPage() {
                       className={cn(
                         "rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase",
                         rep.status === "open"
-                          ? "bg-[#D91E2A] text-white"
+                          ? "bg-[#D94E34] text-white"
                           : "bg-emerald-100 text-emerald-800"
                       )}
                     >
                       {rep.status}
                     </span>
-                    <span className="text-xs font-bold text-[#0A2E6E]">
+                    <span className="text-xs font-bold text-[#181917]">
                       {rep.reason}
                     </span>
                     <span className="text-[11px] text-slate-400">
@@ -829,7 +829,7 @@ export default function EditorialDashboardPage() {
                     className="h-11 w-11 rounded-full object-cover"
                   />
                   <div>
-                    <p className="text-sm font-bold text-[#0B1426]">
+                    <p className="text-sm font-bold text-[#181917]">
                       {prof.fullName}
                     </p>
                     <p className="text-xs text-slate-500">
@@ -837,7 +837,7 @@ export default function EditorialDashboardPage() {
                     </p>
                   </div>
                 </div>
-                <span className="rounded-full bg-[#0A2E6E]/10 px-2.5 py-0.5 text-[10px] font-bold uppercase text-[#0A2E6E]">
+                <span className="rounded-full bg-[#1B5E43]/10 px-2.5 py-0.5 text-[10px] font-bold uppercase text-[#181917]">
                   {prof.role}
                 </span>
               </div>
@@ -888,8 +888,8 @@ export default function EditorialDashboardPage() {
                     className={cn(
                       "rounded-full px-3 py-1 text-[11px] font-bold",
                       prof.isSuspended
-                        ? "bg-[#D91E2A] text-white"
-                        : "bg-red-50 text-[#D91E2A]"
+                        ? "bg-[#D94E34] text-white"
+                        : "bg-red-50 text-[#D94E34]"
                     )}
                   >
                     {prof.isSuspended ? "Suspended" : "Suspend"}

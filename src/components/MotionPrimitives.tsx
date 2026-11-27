@@ -11,17 +11,23 @@ import {
   useTransform,
 } from "framer-motion";
 import { usePathname } from "next/navigation";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-gsap.registerPlugin(ScrollTrigger);
+if (typeof window !== "undefined") {
+  gsap.registerPlugin(ScrollTrigger);
+}
 
-const EASE_KARAVALI: [number, number, number, number] = [0.16, 1, 0.3, 1];
+export const EASE_EDITORIAL: [number, number, number, number] = [0.22, 1, 0.36, 1];
 
+/**
+ * Motion for React: Reading progress bar in Electric Blue (#398BFF).
+ */
 export function ScrollProgressBar() {
   const { scrollYProgress } = useScroll();
   const scaleX = useSpring(scrollYProgress, {
-    stiffness: 240,
-    damping: 32,
+    stiffness: 260,
+    damping: 34,
     restDelta: 0.001,
   });
 
@@ -29,11 +35,143 @@ export function ScrollProgressBar() {
     <motion.div
       aria-hidden="true"
       style={{ scaleX }}
-      className="fixed top-0 left-0 right-0 z-50 h-[3px] origin-left bg-[#B7F36B] pointer-events-none"
+      className="fixed top-0 left-0 right-0 z-50 h-[2.5px] origin-left bg-[#398BFF] shadow-[0_0_12px_rgba(57,139,255,0.65)] pointer-events-none"
     />
   );
 }
 
+/**
+ * Masked headline reveal using Motion for above-the-fold LCP headlines,
+ * or GSAP ScrollTrigger clip-path wipe when `triggerOnScroll` is enabled.
+ */
+export function MaskedHeadlineReveal({
+  children,
+  delay = 0,
+  triggerOnScroll = false,
+  className,
+}: {
+  children: React.ReactNode;
+  delay?: number;
+  triggerOnScroll?: boolean;
+  className?: string;
+}) {
+  const prefersReduced = useReducedMotion();
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const innerRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!triggerOnScroll || prefersReduced) return;
+    if (!containerRef.current || !innerRef.current) return;
+
+    const mm = gsap.matchMedia();
+    mm.add("(prefers-reduced-motion: no-preference)", () => {
+      gsap.fromTo(
+        innerRef.current,
+        {
+          yPercent: 100,
+          clipPath: "inset(0% 0% 100% 0%)",
+          opacity: 0.2,
+        },
+        {
+          yPercent: 0,
+          clipPath: "inset(0% 0% 0% 0%)",
+          opacity: 1,
+          duration: 0.72,
+          delay,
+          ease: "power4.out",
+          scrollTrigger: {
+            trigger: containerRef.current,
+            start: "top 90%",
+            once: true,
+          },
+        }
+      );
+    });
+
+    return () => mm.revert();
+  }, [triggerOnScroll, delay, prefersReduced]);
+
+  if (triggerOnScroll) {
+    return (
+      <div ref={containerRef} className="overflow-hidden">
+        <div ref={innerRef} className={className}>
+          {children}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="overflow-hidden">
+      <motion.div
+        initial={
+          prefersReduced
+            ? false
+            : { y: "100%", clipPath: "inset(0% 0% 100% 0%)", opacity: 0.25 }
+        }
+        animate={{ y: 0, clipPath: "inset(0% 0% 0% 0%)", opacity: 1 }}
+        transition={{ duration: 0.68, delay, ease: EASE_EDITORIAL }}
+        className={className}
+      >
+        {children}
+      </motion.div>
+    </div>
+  );
+}
+
+/**
+ * Strictly uses Terracotta (#D94E34) for urgent live broadcast status only,
+ * featuring concentric beacon + animated broadcast waveform bars.
+ */
+export function AnimatedLiveIndicator({
+  label = "LIVE",
+  showWaveform = false,
+  className,
+}: {
+  label?: string;
+  showWaveform?: boolean;
+  className?: string;
+}) {
+  const prefersReduced = useReducedMotion();
+
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center gap-1.5 rounded-full bg-[#D94E34] px-2.5 py-0.5 text-[10px] font-extrabold uppercase tracking-widest text-white shadow-xs",
+        className
+      )}
+    >
+      <span className="relative flex h-2 w-2">
+        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-white opacity-75" />
+        <span className="relative inline-flex h-2 w-2 rounded-full bg-white" />
+      </span>
+      <span>{label}</span>
+      {showWaveform && !prefersReduced && (
+        <span className="inline-flex items-end gap-[2px] h-2.5 ml-0.5" aria-hidden="true">
+          {[0, 1, 2].map((bar) => (
+            <motion.span
+              key={bar}
+              animate={{ height: ["35%", "100%", "45%"] }}
+              transition={{
+                duration: 0.75,
+                repeat: Infinity,
+                repeatType: "reverse",
+                delay: bar * 0.16,
+                ease: "easeInOut",
+              }}
+              className="w-[2px] rounded-full bg-white"
+            />
+          ))}
+        </span>
+      )}
+    </span>
+  );
+}
+
+/**
+ * GSAP ScrollTrigger editorial reveal using directional clip-path curtain
+ * and subtle lift rather than generic fade-ins.
+ */
 export function EditorialReveal({
   children,
   delay = 0,
@@ -43,19 +181,51 @@ export function EditorialReveal({
   delay?: number;
   className?: string;
 }) {
+  const ref = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!ref.current) return;
+    const mm = gsap.matchMedia();
+
+    mm.add("(prefers-reduced-motion: no-preference)", () => {
+      gsap.fromTo(
+        ref.current,
+        {
+          opacity: 0,
+          y: 26,
+          clipPath: "inset(0% 0% 8% 0%)",
+        },
+        {
+          opacity: 1,
+          y: 0,
+          clipPath: "inset(0% 0% 0% 0%)",
+          duration: 0.68,
+          delay,
+          ease: "power3.out",
+          clearProps: "clipPath,transform",
+          scrollTrigger: {
+            trigger: ref.current,
+            start: "top 89%",
+            once: true,
+          },
+        }
+      );
+    });
+
+    return () => mm.revert();
+  }, [delay]);
+
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 26, scale: 0.98 }}
-      whileInView={{ opacity: 1, y: 0, scale: 1 }}
-      viewport={{ once: true, amount: 0.08 }}
-      transition={{ duration: 0.55, delay, ease: EASE_KARAVALI }}
-      className={className}
-    >
+    <div ref={ref} className={className}>
       {children}
-    </motion.div>
+    </div>
   );
 }
 
+/**
+ * GSAP ScrollTrigger staggered wave container for grids and lists.
+ * Re-checks child count cleanly for asynchronously fetched data.
+ */
 export function StaggerGroup({
   children,
   className,
@@ -63,23 +233,48 @@ export function StaggerGroup({
   children: React.ReactNode;
   className?: string;
 }) {
-  return (
-    <motion.div
-      initial="hidden"
-      whileInView="visible"
-      viewport={{ once: true, amount: 0.06 }}
-      variants={{
-        hidden: {},
-        visible: {
-          transition: {
-            staggerChildren: 0.08,
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const childCount = React.Children.count(children);
+
+  useEffect(() => {
+    if (!containerRef.current || childCount === 0) return;
+
+    const mm = gsap.matchMedia();
+    mm.add("(prefers-reduced-motion: no-preference)", () => {
+      const items = containerRef.current?.querySelectorAll(
+        ":scope > .pethri-stagger-item:not([data-gsap-done='1'])"
+      );
+      if (!items || items.length === 0) return;
+
+      items.forEach((el) => el.setAttribute("data-gsap-done", "1"));
+
+      gsap.fromTo(
+        items,
+        { opacity: 0, y: 24, scale: 0.975 },
+        {
+          opacity: 1,
+          y: 0,
+          scale: 1,
+          duration: 0.56,
+          stagger: 0.075,
+          ease: "power3.out",
+          clearProps: "transform",
+          scrollTrigger: {
+            trigger: containerRef.current,
+            start: "top 88%",
+            once: true,
           },
-        },
-      }}
-      className={className}
-    >
+        }
+      );
+    });
+
+    return () => mm.revert();
+  }, [childCount]);
+
+  return (
+    <div ref={containerRef} className={className}>
       {children}
-    </motion.div>
+    </div>
   );
 }
 
@@ -91,34 +286,90 @@ export function StaggerItem({
   className?: string;
 }) {
   return (
-    <motion.div
-      variants={{
-        hidden: { opacity: 0, y: 24, scale: 0.97 },
-        visible: {
-          opacity: 1,
-          y: 0,
-          scale: 1,
-          transition: { duration: 0.5, ease: EASE_KARAVALI },
-        },
-      }}
-      className={className}
-    >
-      {children}
-    </motion.div>
+    <div className={cn("pethri-stagger-item", className)}>{children}</div>
   );
 }
 
 /**
- * GSAP ScrollTrigger masked image reveal & parallax frame for Tiara-inspired visual storytelling.
+ * GSAP ScrollTrigger scrubbed depth parallax layer for editorial sections.
+ */
+export function ScrollParallaxLayer({
+  children,
+  speed = 24,
+  className,
+}: {
+  children: React.ReactNode;
+  speed?: number;
+  className?: string;
+}) {
+  const ref = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!ref.current) return;
+    const mm = gsap.matchMedia();
+
+    mm.add("(prefers-reduced-motion: no-preference)", () => {
+      gsap.fromTo(
+        ref.current,
+        { y: -speed * 0.5 },
+        {
+          y: speed * 0.5,
+          ease: "none",
+          scrollTrigger: {
+            trigger: ref.current,
+            start: "top bottom",
+            end: "bottom top",
+            scrub: 0.65,
+          },
+        }
+      );
+    });
+
+    return () => mm.revert();
+  }, [speed]);
+
+  return (
+    <div ref={ref} className={cn("will-change-transform", className)}>
+      {children}
+    </div>
+  );
+}
+
+/**
+ * Motion for React: Shared-layout sliding navigation indicator.
+ */
+export function AnimatedNavPill({
+  layoutId = "pethri-nav-pill",
+  className,
+}: {
+  layoutId?: string;
+  className?: string;
+}) {
+  return (
+    <motion.span
+      layoutId={layoutId}
+      transition={{ type: "spring", stiffness: 460, damping: 36 }}
+      className={cn(
+        "absolute inset-0 rounded-full bg-[#1B5E43] shadow-xs -z-10",
+        className
+      )}
+    />
+  );
+}
+
+/**
+ * GSAP ScrollTrigger cinematic curtain reveal + scrubbed parallax image zoom.
  */
 export function GsapImageMask({
   src,
   alt,
+  immediate = false,
   className,
   children,
 }: {
   src: string;
   alt: string;
+  immediate?: boolean;
   className?: string;
   children?: React.ReactNode;
 }) {
@@ -126,44 +377,134 @@ export function GsapImageMask({
   const imgRef = useRef<HTMLImageElement | null>(null);
 
   useEffect(() => {
-    const prefersReduced = window.matchMedia(
-      "(prefers-reduced-motion: reduce)"
-    ).matches;
-    if (prefersReduced || !containerRef.current || !imgRef.current) return;
+    if (!containerRef.current || !imgRef.current) return;
+    const mm = gsap.matchMedia();
 
-    const ctx = gsap.context(() => {
+    mm.add("(prefers-reduced-motion: no-preference)", () => {
+      gsap.fromTo(
+        containerRef.current,
+        { clipPath: "inset(8% 0% 0% 0%)", opacity: 0.88 },
+        {
+          clipPath: "inset(0% 0% 0% 0%)",
+          opacity: 1,
+          duration: 0.85,
+          ease: "power3.out",
+          ...(immediate
+            ? {}
+            : {
+                scrollTrigger: {
+                  trigger: containerRef.current,
+                  start: "top 90%",
+                  once: true,
+                },
+              }),
+        }
+      );
+
       gsap.fromTo(
         imgRef.current,
-        { scale: 1.14, yPercent: -4 },
+        { scale: 1.11, yPercent: -3 },
         {
-          scale: 1.04,
-          yPercent: 4,
+          scale: 1.02,
+          yPercent: 3,
           ease: "none",
           scrollTrigger: {
             trigger: containerRef.current,
             start: "top bottom",
             end: "bottom top",
-            scrub: true,
+            scrub: 0.55,
           },
         }
       );
-    }, containerRef);
+    });
 
-    return () => ctx.revert();
-  }, []);
+    return () => mm.revert();
+  }, [immediate, src]);
 
   return (
     <div
       ref={containerRef}
-      className={cn("relative overflow-hidden bg-[#202820]", className)}
+      className={cn("group relative overflow-hidden bg-[#181917]", className)}
     >
       <img
         ref={imgRef}
         src={src}
         alt={alt}
-        className="h-full w-full object-cover will-change-transform transition-transform duration-700"
+        className="h-full w-full object-cover will-change-transform transition-transform duration-700 ease-out group-hover:scale-[1.03]"
       />
       {children}
+    </div>
+  );
+}
+
+export function HorizontalCarousel({
+  children,
+  title,
+  subtitle,
+  rightSlot,
+}: {
+  children: React.ReactNode;
+  title?: string;
+  subtitle?: string;
+  rightSlot?: React.ReactNode;
+}) {
+  const trackRef = useRef<HTMLDivElement | null>(null);
+
+  const scrollByAmount = (dir: -1 | 1) => {
+    if (!trackRef.current) return;
+    trackRef.current.scrollBy({ left: dir * 320, behavior: "smooth" });
+  };
+
+  return (
+    <div className="space-y-4">
+      {(title || rightSlot) && (
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            {subtitle && (
+              <p className="font-mono text-[10px] font-bold uppercase tracking-widest text-[#1B5E43]">
+                {subtitle}
+              </p>
+            )}
+            {title && (
+              <h2 className="font-display text-xl sm:text-2xl font-extrabold text-[#181917]">
+                {title}
+              </h2>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            {rightSlot}
+            <div className="hidden sm:flex items-center gap-1.5">
+              <motion.button
+                type="button"
+                whileHover={{ scale: 1.06 }}
+                whileTap={{ scale: 0.92 }}
+                aria-label="Scroll carousel left"
+                onClick={() => scrollByAmount(-1)}
+                className="flex h-8 w-8 items-center justify-center rounded-full border border-[#E5E3DC] bg-white text-[#181917] transition-colors hover:border-[#398BFF] hover:text-[#398BFF]"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </motion.button>
+              <motion.button
+                type="button"
+                whileHover={{ scale: 1.06 }}
+                whileTap={{ scale: 0.92 }}
+                aria-label="Scroll carousel right"
+                onClick={() => scrollByAmount(1)}
+                className="flex h-8 w-8 items-center justify-center rounded-full border border-[#E5E3DC] bg-white text-[#181917] transition-colors hover:border-[#398BFF] hover:text-[#398BFF]"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </motion.button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div
+        ref={trackRef}
+        className="flex gap-4 overflow-x-auto no-scrollbar scroll-smooth pb-2"
+      >
+        {children}
+      </div>
     </div>
   );
 }
@@ -187,14 +528,14 @@ export function ParallaxMediaFrame({
     target: ref,
     offset: ["start end", "end start"],
   });
-  const y = useTransform(scrollYProgress, [0, 1], ["-5%", "5%"]);
+  const y = useTransform(scrollYProgress, [0, 1], ["-4%", "4%"]);
 
   return (
     <div ref={ref} className={cn("relative overflow-hidden", className)}>
       <motion.img
         src={src}
         alt={alt}
-        style={prefersReduced ? undefined : { y, scale: 1.1 }}
+        style={prefersReduced ? undefined : { y, scale: 1.07 }}
         className={cn(
           "h-full w-full object-cover transition-transform duration-700 will-change-transform",
           imgClassName
@@ -205,15 +546,26 @@ export function ParallaxMediaFrame({
   );
 }
 
+/**
+ * Motion for React page transition paired with ScrollTrigger refresh on route changes.
+ */
 export function PageTransition({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const prefersReduced = useReducedMotion();
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      ScrollTrigger.refresh();
+    }, 180);
+    return () => window.clearTimeout(timer);
+  }, [pathname]);
 
   return (
     <motion.div
       key={pathname}
-      initial={{ opacity: 0, y: 10 }}
+      initial={prefersReduced ? false : { opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3, ease: EASE_KARAVALI }}
+      transition={{ duration: 0.3, ease: EASE_EDITORIAL }}
     >
       {children}
     </motion.div>

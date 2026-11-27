@@ -19,7 +19,11 @@ import {
   UserCheck,
   UserPlus,
 } from "lucide-react";
-import { EditorialReveal, ParallaxMediaFrame } from "@/components/MotionPrimitives";
+import {
+  EditorialReveal,
+  GsapImageMask,
+  MaskedHeadlineReveal,
+} from "@/components/MotionPrimitives";
 import { usePethri } from "@/components/PethriProvider";
 import { RelativeTime } from "@/components/RelativeTime";
 import { VerificationBadge } from "@/components/VerificationBadge";
@@ -29,7 +33,7 @@ import type { PostItem } from "@/types/pethri";
 export default function ArticleReaderPage() {
   const params = useParams<{ id: string }>();
   const postId = params?.id;
-  const { currentUser, showToast } = usePethri();
+  const { currentUser, requireAuth, language, showToast } = usePethri();
 
   const [post, setPost] = useState<PostItem | null>(null);
   const [related, setRelated] = useState<PostItem[]>([]);
@@ -60,6 +64,15 @@ export default function ArticleReaderPage() {
     content?: string
   ) => {
     if (!post) return;
+    if (action !== "share") {
+      const labelMap = {
+        like: "react to this article",
+        bookmark: "bookmark this article",
+        comment: "comment on this article",
+      };
+      if (!requireAuth(labelMap[action])) return;
+    }
+
     const res = await fetch(`/api/posts/${post.id}/engage`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -78,6 +91,7 @@ export default function ArticleReaderPage() {
 
   const handleFollow = async () => {
     if (!post) return;
+    if (!requireAuth("follow Karavali reporters")) return;
     const res = await fetch("/api/broadcast", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -109,6 +123,7 @@ export default function ArticleReaderPage() {
   const handleReportSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!post) return;
+    if (!requireAuth("flag content")) return;
     const res = await fetch("/api/reports", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -129,9 +144,9 @@ export default function ArticleReaderPage() {
   if (loading) {
     return (
       <div className="mx-auto max-w-4xl px-4 py-12 space-y-5">
-        <div className="h-6 w-48 animate-pulse bg-slate-200 rounded" />
-        <div className="h-14 w-full animate-pulse bg-slate-200 rounded" />
-        <div className="h-80 w-full animate-pulse bg-slate-200 rounded-lg" />
+        <div className="h-6 w-48 animate-pulse bg-[#EAF2EE] rounded" />
+        <div className="h-14 w-full animate-pulse bg-[#EAF2EE]/60 rounded" />
+        <div className="h-80 w-full animate-pulse bg-[#E5E3DC] rounded-2xl" />
       </div>
     );
   }
@@ -139,18 +154,18 @@ export default function ArticleReaderPage() {
   if (!post) {
     return (
       <div className="mx-auto max-w-2xl px-4 py-16 text-center">
-        <h1 className="font-editorial text-3xl text-[#0A2E6E]">
-          Dispatch not found
+        <h1 className="font-editorial text-3xl text-[#181917]">
+          Article not found
         </h1>
-        <p className="mt-2 text-sm text-slate-600">
-          This story may still be awaiting editorial review or was moved.
+        <p className="mt-2 text-sm text-[#5A605C]">
+          This submission may still be in private editorial review.
         </p>
         <Link
           href="/"
-          className="mt-5 inline-flex items-center gap-2 rounded-full bg-[#0A2E6E] px-5 py-2.5 text-xs font-bold text-white"
+          className="mt-5 inline-flex items-center gap-2 rounded-full bg-[#1B5E43] px-5 py-2.5 text-xs font-extrabold text-white hover:bg-[#398BFF] transition-colors"
         >
           <ArrowLeft className="h-4 w-4" />
-          Back to Pethri Frontpage
+          Back to Pethri Pulse
         </Link>
       </div>
     );
@@ -163,21 +178,24 @@ export default function ArticleReaderPage() {
     1,
     Math.ceil(post.body.split(/\s+/).length / 160)
   );
+  const title =
+    language === "kn" && post.headlineKn ? post.headlineKn : post.headline;
+  const bodyText =
+    language === "kn" && post.bodyKn ? post.bodyKn : post.body;
 
   return (
-    <article className="bg-white min-h-screen">
-      {/* Top Editorial Breadcrumb Strip */}
-      <div className="border-b border-slate-200 bg-[#FAFAF9]">
+    <article className="bg-[#F8F7F4] min-h-screen">
+      <div className="border-b border-[#E5E3DC] bg-white">
         <div className="mx-auto max-w-5xl px-4 py-3 flex flex-wrap items-center justify-between gap-3 text-xs">
           <Link
             href="/feed"
-            className="inline-flex items-center gap-1.5 font-bold text-[#0A2E6E] hover:text-[#D91E2A]"
+            className="inline-flex items-center gap-1.5 font-bold text-[#398BFF] hover:underline"
           >
             <ArrowLeft className="h-3.5 w-3.5" />
-            <span>Back to News Feed</span>
+            <span>Back to News &amp; Discussions</span>
           </Link>
-          <div className="flex items-center gap-2 font-mono text-[11px] text-slate-500">
-            <span className="font-bold text-[#D91E2A] uppercase">
+          <div className="flex items-center gap-2 font-mono text-[11px] text-[#5A605C]">
+            <span className="font-bold text-[#1B5E43] uppercase">
               {post.localityName}
             </span>
             <span>/</span>
@@ -188,60 +206,60 @@ export default function ArticleReaderPage() {
         </div>
       </div>
 
-      {/* Article Header */}
       <header className="mx-auto max-w-4xl px-4 pt-8 pb-6">
         <div className="flex flex-wrap items-center gap-2.5 mb-4">
           {post.isBreaking && isNewsroom && (
-            <span className="bg-[#D91E2A] px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-widest text-white">
+            <span className="rounded-full bg-[#D94E34] px-3 py-1 text-[10px] font-extrabold uppercase tracking-widest text-white">
               Breaking News
             </span>
           )}
           {isNewsroom ? (
-            <span className="inline-flex items-center gap-1 bg-[#0A2E6E] px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-white">
+            <span className="inline-flex items-center gap-1 rounded-full bg-[#1B5E43] px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-white">
               <ShieldCheck className="h-3.5 w-3.5" />
-              Pethri Newsroom Dispatch
+              Verified Editorial Reporting
             </span>
           ) : isSponsored ? (
-            <span className="bg-amber-100 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-amber-900">
+            <span className="rounded-full bg-[#EAF2EE] border border-[#E5E3DC] px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-[#181917]">
               Sponsored Partner • {post.sponsorInfo?.advertiserName}
             </span>
           ) : (
-            <span className="border border-slate-300 bg-slate-50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-700">
-              Citizen Desk Submission
+            <span className="rounded-full bg-[#EAF2EE] px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-[#1B5E43]">
+              Editorially Reviewed Tip
             </span>
           )}
 
           {!isSponsored && <VerificationBadge tier={post.verificationTier} />}
         </div>
 
-        <h1 className="font-editorial text-4xl sm:text-5xl lg:text-[54px] leading-[1.08] tracking-tight text-[#0B1426]">
-          {post.headline}
-        </h1>
+        <MaskedHeadlineReveal>
+          <h1 className="font-editorial text-4xl sm:text-5xl lg:text-[54px] leading-[1.08] tracking-tight text-[#181917]">
+            {title}
+          </h1>
+        </MaskedHeadlineReveal>
 
-        {/* Reporter Byline & Timestamps Bar */}
-        <div className="mt-6 flex flex-wrap items-center justify-between gap-4 border-y border-slate-200 py-4">
+        <div className="mt-6 flex flex-wrap items-center justify-between gap-4 border-y border-[#E5E3DC] py-4">
           <div className="flex items-center gap-3">
             <Link href={`/profile?user=${post.author.username}`}>
               <img
                 src={post.author.avatarUrl}
                 alt={post.author.fullName}
-                className="h-12 w-12 rounded-full object-cover ring-1 ring-slate-200"
+                className="h-12 w-12 rounded-full object-cover ring-1 ring-[#E5E3DC]"
               />
             </Link>
             <div>
               <div className="flex items-center gap-2">
                 <Link
                   href={`/profile?user=${post.author.username}`}
-                  className="text-sm font-extrabold text-[#0B1426] hover:text-[#0A2E6E]"
+                  className="text-sm font-extrabold text-[#181917] hover:text-[#398BFF] transition-colors"
                 >
                   {post.author.fullName}
                 </Link>
-                <span className="text-[11px] font-semibold uppercase text-slate-500">
+                <span className="text-[11px] font-semibold uppercase text-[#5A605C]">
                   • {post.author.role}
                 </span>
               </div>
-              <div className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-slate-500">
-                <span className="inline-flex items-center gap-1 font-semibold text-[#D91E2A]">
+              <div className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-[#5A605C]">
+                <span className="inline-flex items-center gap-1 font-bold text-[#1B5E43]">
                   <MapPin className="h-3 w-3" />
                   {post.localityName}
                   {post.approxLandmark ? ` (${post.approxLandmark})` : ""}
@@ -251,14 +269,6 @@ export default function ArticleReaderPage() {
                   <Clock className="h-3 w-3" />
                   Published <RelativeTime iso={post.createdAt} />
                 </span>
-                {post.reviewedAt && (
-                  <>
-                    <span>•</span>
-                    <span>
-                      Reviewed <RelativeTime iso={post.reviewedAt} />
-                    </span>
-                  </>
-                )}
               </div>
             </div>
           </div>
@@ -269,10 +279,10 @@ export default function ArticleReaderPage() {
                 type="button"
                 onClick={handleFollow}
                 className={cn(
-                  "inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-xs font-bold transition-colors",
+                  "inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-xs font-bold transition-colors border",
                   followingAuthor
-                    ? "bg-[#0A2E6E] text-white"
-                    : "border border-[#0A2E6E] text-[#0A2E6E] hover:bg-[#0A2E6E] hover:text-white"
+                    ? "bg-[#1B5E43] border-[#1B5E43] text-white"
+                    : "border-[#E5E3DC] bg-white text-[#181917] hover:border-[#398BFF] hover:text-[#398BFF]"
                 )}
               >
                 {followingAuthor ? (
@@ -295,8 +305,8 @@ export default function ArticleReaderPage() {
               className={cn(
                 "inline-flex h-9 w-9 items-center justify-center rounded-full border transition-colors",
                 post.bookmarkedByMe
-                  ? "border-[#0A2E6E] bg-[#0A2E6E] text-white"
-                  : "border-slate-200 text-slate-600 hover:border-[#0A2E6E]"
+                  ? "border-[#398BFF] bg-[#398BFF] text-white"
+                  : "border-[#E5E3DC] bg-white text-[#181917] hover:border-[#398BFF] hover:text-[#398BFF]"
               )}
             >
               <Bookmark className="h-4 w-4" />
@@ -305,7 +315,7 @@ export default function ArticleReaderPage() {
               type="button"
               onClick={handleShare}
               aria-label="Share article"
-              className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 text-slate-600 hover:border-[#0A2E6E]"
+              className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[#E5E3DC] bg-white text-[#181917] hover:border-[#398BFF] hover:text-[#398BFF] transition-colors"
             >
               <Share2 className="h-4 w-4" />
             </button>
@@ -313,10 +323,9 @@ export default function ArticleReaderPage() {
         </div>
       </header>
 
-      {/* Hero Visual Stage with Subtle Parallax */}
       {activeMedia && (
         <div className="mx-auto max-w-5xl px-4">
-          <div className="relative overflow-hidden rounded-lg border border-slate-200 bg-slate-950">
+          <div className="relative overflow-hidden rounded-3xl border border-[#E5E3DC] bg-[#181917]">
             {activeMedia.mediaType === "video" ? (
               <video
                 src={activeMedia.url}
@@ -326,7 +335,8 @@ export default function ArticleReaderPage() {
                 className="w-full max-h-[540px] object-cover"
               />
             ) : (
-              <ParallaxMediaFrame
+              <GsapImageMask
+                immediate
                 src={activeMedia.url}
                 alt={activeMedia.caption ?? post.headline}
                 className="h-[300px] sm:h-[460px] w-full"
@@ -343,7 +353,7 @@ export default function ArticleReaderPage() {
                       (i) => (i - 1 + post.media.length) % post.media.length
                     )
                   }
-                  className="absolute left-3 top-1/2 -translate-y-1/2 flex h-9 w-9 items-center justify-center rounded-full bg-black/60 text-white"
+                  className="absolute left-3 top-1/2 -translate-y-1/2 flex h-9 w-9 items-center justify-center rounded-full bg-[#181917]/75 text-white hover:bg-[#398BFF]"
                 >
                   <ChevronLeft className="h-4 w-4" />
                 </button>
@@ -353,14 +363,14 @@ export default function ArticleReaderPage() {
                   onClick={() =>
                     setSlideIndex((i) => (i + 1) % post.media.length)
                   }
-                  className="absolute right-3 top-1/2 -translate-y-1/2 flex h-9 w-9 items-center justify-center rounded-full bg-black/60 text-white"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 flex h-9 w-9 items-center justify-center rounded-full bg-[#181917]/75 text-white hover:bg-[#398BFF]"
                 >
                   <ChevronRight className="h-4 w-4" />
                 </button>
               </>
             )}
           </div>
-          <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500">
+          <div className="mt-2.5 flex flex-wrap items-center justify-between gap-2 text-xs text-[#5A605C]">
             <span className="italic">
               {activeMedia.caption ?? "Field photograph from Pethri network"}
             </span>
@@ -373,54 +383,54 @@ export default function ArticleReaderPage() {
         </div>
       )}
 
-      {/* Longform Editorial Body & Sidebar */}
       <div className="mx-auto max-w-5xl px-4 py-10 grid gap-10 lg:grid-cols-12 items-start">
         <div className="lg:col-span-8 space-y-6">
           <EditorialReveal>
-            <p className="editorial-dropcap text-base sm:text-lg leading-[1.8] text-slate-800 whitespace-pre-line">
-              {post.body}
+            <p className="editorial-dropcap text-base sm:text-lg leading-[1.82] text-[#181917] whitespace-pre-line">
+              {bodyText}
             </p>
           </EditorialReveal>
 
-          {/* Correction History Log */}
           {post.corrections && post.corrections.length > 0 && (
-            <div className="border-l-4 border-[#0A2E6E] bg-blue-50/70 p-4 text-xs">
-              <div className="flex items-center gap-1.5 font-extrabold uppercase tracking-wider text-[#0A2E6E]">
+            <div className="rounded-2xl border border-[#E5E3DC] bg-[#EAF2EE] p-4 text-xs">
+              <div className="flex items-center gap-1.5 font-extrabold uppercase tracking-wider text-[#1B5E43]">
                 <FileEdit className="h-4 w-4" />
                 <span>Editorial Correction History</span>
               </div>
-              <div className="mt-2 space-y-2 text-slate-700">
+              <div className="mt-2 space-y-2 text-[#181917]">
                 {post.corrections.map((c) => (
                   <div key={c.id}>
-                    <p className="font-bold text-[#0B1426]">
+                    <p className="font-bold">
                       {c.correctedBy} • <RelativeTime iso={c.correctedAt} />
                     </p>
-                    <p className="mt-0.5">{c.summary}</p>
+                    <p className="mt-0.5 text-[#5A605C]">{c.summary}</p>
                   </div>
                 ))}
               </div>
             </div>
           )}
 
-          {/* Engagement & Fact-Check Actions */}
-          <div className="flex flex-wrap items-center justify-between gap-4 border-y border-slate-200 py-4">
+          <div className="flex flex-wrap items-center justify-between gap-4 border-y border-[#E5E3DC] py-4">
             <div className="flex items-center gap-5">
               <button
                 type="button"
                 onClick={() => engage("like")}
                 className={cn(
-                  "inline-flex items-center gap-2 text-sm font-bold transition-transform active:scale-90",
+                  "inline-flex items-center gap-2 text-sm font-bold transition-colors",
                   post.likedByMe
-                    ? "text-[#D91E2A]"
-                    : "text-slate-700 hover:text-[#D91E2A]"
+                    ? "text-[#398BFF]"
+                    : "text-[#5A605C] hover:text-[#398BFF]"
                 )}
               >
                 <Heart
-                  className={cn("h-5 w-5", post.likedByMe && "fill-[#D91E2A]")}
+                  className={cn(
+                    "h-5 w-5",
+                    post.likedByMe && "fill-[#398BFF] text-[#398BFF]"
+                  )}
                 />
-                <span>{post.likesCount} Likes</span>
+                <span>{post.likesCount} Reactions</span>
               </button>
-              <span className="inline-flex items-center gap-2 text-sm font-bold text-slate-700">
+              <span className="inline-flex items-center gap-2 text-sm font-bold text-[#5A605C]">
                 <MessageCircle className="h-5 w-5" />
                 <span>{post.commentsCount} Comments</span>
               </span>
@@ -428,8 +438,11 @@ export default function ArticleReaderPage() {
 
             <button
               type="button"
-              onClick={() => setReportOpen((v) => !v)}
-              className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-[#D91E2A]"
+              onClick={() => {
+                if (!requireAuth("request a correction or flag content")) return;
+                setReportOpen((v) => !v);
+              }}
+              className="inline-flex items-center gap-1.5 text-xs font-bold text-[#5A605C] hover:text-[#D94E34] transition-colors"
             >
               <Flag className="h-4 w-4" />
               Request Fact-Check / Report
@@ -439,15 +452,15 @@ export default function ArticleReaderPage() {
           {reportOpen && (
             <form
               onSubmit={handleReportSubmit}
-              className="rounded-lg border border-red-200 bg-red-50/70 p-4 space-y-2.5"
+              className="rounded-2xl border border-[#E5E3DC] bg-white p-4 space-y-2.5"
             >
-              <p className="text-xs font-bold text-[#D91E2A]">
-                Submit Correction Request or Content Flag
+              <p className="text-xs font-bold text-[#181917]">
+                Submit Correction Request or Flag
               </p>
               <select
                 value={reportReason}
                 onChange={(e) => setReportReason(e.target.value)}
-                className="w-full rounded border border-red-200 bg-white px-3 py-2 text-xs outline-none"
+                className="w-full rounded-xl border border-[#E5E3DC] bg-[#F8F7F4] px-3 py-2 text-xs outline-none focus:border-[#398BFF]"
               >
                 <option>Needs fact-check</option>
                 <option>Inaccurate timing or locality</option>
@@ -459,20 +472,19 @@ export default function ArticleReaderPage() {
                 value={reportDetails}
                 onChange={(e) => setReportDetails(e.target.value)}
                 placeholder="Explain what should be reviewed..."
-                className="w-full rounded border border-red-200 bg-white px-3 py-2 text-xs outline-none"
+                className="w-full rounded-xl border border-[#E5E3DC] bg-[#F8F7F4] px-3 py-2 text-xs outline-none focus:border-[#398BFF]"
               />
               <button
                 type="submit"
-                className="rounded-full bg-[#D91E2A] px-4 py-1.5 text-xs font-bold text-white"
+                className="rounded-full bg-[#D94E34] px-4 py-1.5 text-xs font-extrabold text-white"
               >
-                Send to Newsroom
+                Send to Editors
               </button>
             </form>
           )}
 
-          {/* Reader Discussion */}
           <section className="space-y-4 pt-2">
-            <h2 className="font-display text-lg font-extrabold text-[#0A2E6E]">
+            <h2 className="font-display text-lg font-extrabold text-[#181917]">
               Community Discussion ({post.comments.length})
             </h2>
 
@@ -489,13 +501,13 @@ export default function ArticleReaderPage() {
                 type="text"
                 value={commentText}
                 onChange={(e) => setCommentText(e.target.value)}
-                placeholder={`Add your perspective as ${currentUser.fullName}...`}
-                className="flex-1 rounded-full border border-slate-300 px-4 py-2.5 text-sm outline-none focus:border-[#0A2E6E]"
+                placeholder="Join the discussion (sign in required)..."
+                className="flex-1 rounded-full border border-[#E5E3DC] bg-white px-4 py-2.5 text-sm outline-none focus:border-[#398BFF]"
               />
               <button
                 type="submit"
                 disabled={!commentText.trim()}
-                className="rounded-full bg-[#0A2E6E] px-5 py-2.5 text-xs font-bold text-white disabled:opacity-50"
+                className="rounded-full bg-[#1B5E43] px-5 py-2.5 text-xs font-extrabold text-white hover:bg-[#398BFF] disabled:opacity-50 transition-colors"
               >
                 Comment
               </button>
@@ -505,7 +517,7 @@ export default function ArticleReaderPage() {
               {post.comments.map((c) => (
                 <div
                   key={c.id}
-                  className="flex items-start gap-3 border-b border-slate-100 pb-3"
+                  className="flex items-start gap-3 rounded-2xl border border-[#E5E3DC] bg-white p-3.5"
                 >
                   <img
                     src={c.authorAvatar}
@@ -513,13 +525,13 @@ export default function ArticleReaderPage() {
                     className="h-8 w-8 rounded-full object-cover"
                   />
                   <div>
-                    <p className="text-xs font-bold text-[#0A2E6E]">
+                    <p className="text-xs font-bold text-[#181917]">
                       {c.authorName}{" "}
-                      <span className="font-normal text-slate-400">
+                      <span className="font-normal text-[#5A605C]">
                         • <RelativeTime iso={c.createdAt} />
                       </span>
                     </p>
-                    <p className="mt-1 text-sm text-slate-700">{c.content}</p>
+                    <p className="mt-1 text-sm text-[#5A605C]">{c.content}</p>
                   </div>
                 </div>
               ))}
@@ -527,42 +539,34 @@ export default function ArticleReaderPage() {
           </section>
         </div>
 
-        {/* Related Stories Rail */}
-        <aside className="lg:col-span-4 space-y-5 lg:border-l lg:border-slate-200 lg:pl-6">
-          <div className="border-b border-slate-200 pb-2">
-            <p className="text-[11px] font-extrabold uppercase tracking-wider text-[#D91E2A]">
-              Related Dispatches
+        <aside className="lg:col-span-4 space-y-5 lg:border-l lg:border-[#E5E3DC] lg:pl-6">
+          <div className="border-b border-[#E5E3DC] pb-2">
+            <p className="font-mono text-[10px] font-extrabold uppercase tracking-widest text-[#1B5E43]">
+              RELATED DISPATCHES
             </p>
-            <h2 className="font-display text-lg font-extrabold text-[#0A2E6E]">
-              More from {post.localityName} &amp; Beat
+            <h2 className="font-display text-lg font-extrabold text-[#181917]">
+              More from {post.localityName}
             </h2>
           </div>
 
-          <div className="divide-y divide-slate-200">
-            {related.length === 0 ? (
-              <p className="text-xs text-slate-500">
-                Browse the full feed for more updates.
-              </p>
-            ) : (
-              related.map((item) => (
-                <Link
-                  key={item.id}
-                  href={`/article/${item.id}`}
-                  className="block py-4 first:pt-0 group"
-                >
-                  <p className="text-[10px] font-bold uppercase text-[#D91E2A]">
-                    {item.localityName} • {CATEGORY_META[item.category].short}
-                  </p>
-                  <h3 className="mt-1 font-editorial text-xl leading-snug text-[#0B1426] group-hover:text-[#0A2E6E]">
-                    {item.headline}
-                  </h3>
-                  <p className="mt-1 text-[11px] text-slate-500">
-                    {item.author.fullName} •{" "}
-                    <RelativeTime iso={item.createdAt} />
-                  </p>
-                </Link>
-              ))
-            )}
+          <div className="divide-y divide-[#E5E3DC]">
+            {related.map((item) => (
+              <Link
+                key={item.id}
+                href={`/article/${item.id}`}
+                className="block py-4 first:pt-0 group"
+              >
+                <p className="text-[10px] font-bold uppercase text-[#1B5E43]">
+                  {item.localityName} • {CATEGORY_META[item.category].short}
+                </p>
+                <h3 className="mt-1 font-editorial text-xl leading-snug text-[#181917] group-hover:text-[#398BFF] transition-colors">
+                  {item.headline}
+                </h3>
+                <p className="mt-1 text-[11px] text-[#5A605C]">
+                  {item.author.fullName} • <RelativeTime iso={item.createdAt} />
+                </p>
+              </Link>
+            ))}
           </div>
         </aside>
       </div>

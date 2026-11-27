@@ -1,12 +1,15 @@
 @import "tailwindcss";
 
 :root {
-  --pethri-cream: #f7f6ef;
-  --pethri-pista: #dcebcb;
-  --pethri-lime: #b7f36b;
-  --pethri-mint: #c9e8d5;
-  --pethri-forest: #202820;
-  --pethri-muted: #525f52;
+  --pethri-linen: #f8f7f4;
+  --pethri-surface: #ffffff;
+  --pethri-basalt: #181917;
+  --pethri-forest: #1b5e43;
+  --pethri-blue: #398bff;
+  --pethri-pebble: #e5e3dc;
+  --pethri-terracotta: #d94e34;
+  --pethri-sage: #eaf2ee;
+  --pethri-muted: #5a605c;
 }
 
 @theme inline {
@@ -21,33 +24,43 @@ html {
 }
 
 body {
-  background-color: var(--pethri-cream);
-  color: var(--pethri-forest);
+  background-color: var(--pethri-linen);
+  color: var(--pethri-basalt);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
 }
 
-/* Subtle dot texture for Karavali Luxe sections */
-.bg-pista-grid {
-  background-image: radial-gradient(rgba(32, 40, 32, 0.08) 1px, transparent 1px);
+.bg-linen-dots {
+  background-image: radial-gradient(rgba(27, 94, 67, 0.08) 1px, transparent 1px);
   background-size: 24px 24px;
 }
 
 .bg-forest-grid {
   background-image:
-    linear-gradient(to right, rgba(183, 243, 107, 0.06) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(183, 243, 107, 0.06) 1px, transparent 1px);
-  background-size: 44px 44px;
+    linear-gradient(to right, rgba(234, 242, 238, 0.06) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(234, 242, 238, 0.06) 1px, transparent 1px);
+  background-size: 40px 40px;
 }
 
-/* Longform editorial dropcap */
+.electric-glow {
+  box-shadow:
+    0 0 0 1px rgba(57, 139, 255, 0.25),
+    0 8px 24px -8px rgba(57, 139, 255, 0.32);
+}
+
+.electric-ring:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(57, 139, 255, 0.28);
+  border-color: var(--pethri-blue);
+}
+
 .editorial-dropcap::first-letter {
   float: left;
   font-family: var(--font-editorial);
-  font-size: 3.5rem;
+  font-size: 3.4rem;
   line-height: 0.86;
   padding-right: 0.55rem;
-  padding-top: 0.25rem;
+  padding-top: 0.2rem;
   color: var(--pethri-forest);
 }
 
@@ -63,7 +76,7 @@ body {
 .animate-marquee {
   display: flex;
   width: max-content;
-  animation: pethri-marquee 34s linear infinite;
+  animation: pethri-marquee 36s linear infinite;
 }
 
 .animate-marquee:hover {

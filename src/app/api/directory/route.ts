@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
   createAnnouncement,
+  isActorEditorialStaff,
   listAnnouncements,
   listBusinesses,
   listLocalities,
@@ -26,6 +27,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ notifications: markAllNotificationsRead() });
     }
     if (body.action === "create_announcement") {
+      const actorId = req.headers.get("x-pethri-actor-id") ?? body.actorId;
+      if (!isActorEditorialStaff(actorId)) {
+        return NextResponse.json(
+          { error: "Unauthorized: only authorised Pethri staff can publish bulletins." },
+          { status: 403 }
+        );
+      }
       if (!body.title || !body.summary || !body.issuer) {
         return NextResponse.json(
           { error: "Title, summary, and issuer are required." },

@@ -59,9 +59,9 @@ export default function RootLayout({
       lang="en"
       className={`${jakarta.variable} ${kannada.variable} ${syne.variable} ${instrument.variable} ${jetbrains.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col bg-[#F7F6EF] text-[#202820]">
+      <body className="min-h-full flex flex-col bg-[#F8F7F4] text-[#181917]">
         <PethriProvider>
-          <Suspense fallback={<div className="min-h-screen bg-[#F7F6EF]" />}>
+          <Suspense fallback={<div className="min-h-screen bg-[#F8F7F4]" />}>
             <AppShell>{children}</AppShell>
           </Suspense>
         </PethriProvider>

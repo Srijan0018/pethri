@@ -36,6 +36,48 @@ import type {
   VerificationTier,
 } from "@/types/pethri";
 
+interface ReporterPermissionState {
+  profileId: string;
+  canPublishArticles: boolean;
+  canUploadOfficialMedia: boolean;
+  canStartBroadcasts: boolean;
+  grantedBy: string;
+  updatedAt: string;
+}
+
+interface PermissionHistoryRecord {
+  id: string;
+  targetProfileId: string;
+  changedBy: string;
+  previousRole?: UserRole;
+  newRole?: UserRole;
+  summary: string;
+  createdAt: string;
+}
+
+interface ArticleRevisionRecord {
+  id: string;
+  postId: string;
+  revisionNumber: number;
+  headline: string;
+  body: string;
+  moderationStatus: ModerationStatus;
+  verificationTier: VerificationTier;
+  editedBy: string;
+  changeSummary: string;
+  createdAt: string;
+}
+
+interface ModerationLogRecord {
+  id: string;
+  targetType: "post" | "report";
+  targetId: string;
+  action: string;
+  moderatorId: string;
+  notes?: string;
+  createdAt: string;
+}
+
 interface PethriRuntimeStore {
   localities: Locality[];
   profiles: UserProfile[];
@@ -48,6 +90,10 @@ interface PethriRuntimeStore {
   liveStreams: LiveBroadcast[];
   playlists: ChannelPlaylist[];
   events: LocalEvent[];
+  reporterPermissions: Record<string, ReporterPermissionState>;
+  permissionHistory: PermissionHistoryRecord[];
+  articleRevisions: ArticleRevisionRecord[];
+  moderationLogs: ModerationLogRecord[];
 }
 
 declare global {
@@ -68,6 +114,35 @@ function getRuntimeStore(): PethriRuntimeStore {
       liveStreams: structuredClone(DEMO_LIVE_STREAMS),
       playlists: structuredClone(DEMO_PLAYLISTS),
       events: structuredClone(DEMO_EVENTS),
+      reporterPermissions: {
+        "user-editor": {
+          profileId: "user-editor",
+          canPublishArticles: true,
+          canUploadOfficialMedia: true,
+          canStartBroadcasts: true,
+          grantedBy: "user-editor",
+          updatedAt: new Date().toISOString(),
+        },
+        "user-ananya": {
+          profileId: "user-ananya",
+          canPublishArticles: true,
+          canUploadOfficialMedia: true,
+          canStartBroadcasts: false,
+          grantedBy: "user-editor",
+          updatedAt: new Date().toISOString(),
+        },
+        "user-roshan": {
+          profileId: "user-roshan",
+          canPublishArticles: false,
+          canUploadOfficialMedia: false,
+          canStartBroadcasts: false,
+          grantedBy: "user-editor",
+          updatedAt: new Date().toISOString(),
+        },
+      },
+      permissionHistory: [],
+      articleRevisions: [],
+      moderationLogs: [],
     };
   }
   return globalThis.__pethriRuntimeStore;
@@ -75,6 +150,13 @@ function getRuntimeStore(): PethriRuntimeStore {
 
 export function isNewsroomAuthorized(role?: UserRole): boolean {
   return role === "journalist" || role === "editor" || role === "admin";
+}
+
+export function isActorEditorialStaff(actorId?: string): boolean {
+  if (!actorId) return false;
+  const actor = getRuntimeStore().profiles.find((p) => p.id === actorId);
+  if (!actor || actor.isSuspended) return false;
+  return isNewsroomAuthorized(actor.role) || actor.role === "correspondent";
 }
 
 export interface ListPostsFilter {
@@ -87,6 +169,7 @@ export interface ListPostsFilter {
   onlyMoments?: boolean;
   includePending?: boolean;
   authorId?: string;
+  viewerId?: string;
 }
 
 export async function listLocalities(): Promise<Locality[]> {
@@ -273,10 +356,17 @@ function applyInMemoryFilters(
   posts: PostItem[],
   filters: ListPostsFilter
 ): PostItem[] {
+  const viewerIsStaff = isActorEditorialStaff(filters.viewerId);
+
   return posts
     .filter((post) => {
-      if (!filters.includePending && post.moderationStatus !== "approved") {
-        return false;
+      if (post.moderationStatus !== "approved") {
+        // Private tips & unapproved posts remain strictly invisible to public users
+        if (!filters.includePending) return false;
+        const isOwner = Boolean(filters.viewerId && post.authorId === filters.viewerId);
+        if (!viewerIsStaff && !isOwner) {
+          return false;
+        }
       }
       if (
         filters.locality &&
@@ -578,6 +668,31 @@ export function reviewRuntimePost(
   post.reviewedBy = update.reviewerId ?? "user-editor";
   post.reviewedAt = new Date().toISOString();
 
+  const revNum =
+    store.articleRevisions.filter((r) => r.postId === post.id).length + 1;
+  store.articleRevisions.unshift({
+    id: `rev-${Date.now()}`,
+    postId: post.id,
+    revisionNumber: revNum,
+    headline: post.headline,
+    body: post.body,
+    moderationStatus: post.moderationStatus,
+    verificationTier: post.verificationTier,
+    editedBy: post.reviewedBy,
+    changeSummary:
+      update.moderationNotes ?? `Editorial status -> ${update.moderationStatus}`,
+    createdAt: new Date().toISOString(),
+  });
+  store.moderationLogs.unshift({
+    id: `mod-${Date.now()}`,
+    targetType: "post",
+    targetId: post.id,
+    action: `review_${update.moderationStatus}`,
+    moderatorId: post.reviewedBy,
+    notes: update.moderationNotes,
+    createdAt: new Date().toISOString(),
+  });
+
   if (update.moderationStatus === "approved") {
     store.notifications.unshift({
       id: `notif-${Date.now()}`,
@@ -844,11 +959,13 @@ export function updateProfileGovernance(
     role?: UserRole;
     isVerifiedReporter?: boolean;
     isSuspended?: boolean;
+    actorId?: string;
   }
 ): UserProfile | null {
   const store = getRuntimeStore();
   const profile = store.profiles.find((p) => p.id === userId);
   if (!profile) return null;
+  const previousRole = profile.role;
   if (updates.role) profile.role = updates.role;
   if (typeof updates.isVerifiedReporter === "boolean") {
     profile.isVerifiedReporter = updates.isVerifiedReporter;
@@ -856,7 +973,25 @@ export function updateProfileGovernance(
   if (typeof updates.isSuspended === "boolean") {
     profile.isSuspended = updates.isSuspended;
   }
+  store.permissionHistory.unshift({
+    id: `permh-${Date.now()}`,
+    targetProfileId: profile.id,
+    changedBy: updates.actorId ?? "user-editor",
+    previousRole,
+    newRole: profile.role,
+    summary: `Role/governance updated (${previousRole} -> ${profile.role})`,
+    createdAt: new Date().toISOString(),
+  });
   return profile;
+}
+
+export function listEditorialGovernanceLogs() {
+  const store = getRuntimeStore();
+  return {
+    articleRevisions: store.articleRevisions,
+    moderationLogs: store.moderationLogs,
+    permissionHistory: store.permissionHistory,
+  };
 }
 
 export function listBusinesses(locality?: string): LocalBusiness[] {

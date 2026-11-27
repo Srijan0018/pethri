@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
-  createCommunityLiveStream,
   getLiveBroadcast,
   listEvents,
   listLiveStreams,
@@ -45,22 +44,13 @@ export async function POST(req: NextRequest) {
     }
 
     if (body.action === "create_community_stream") {
-      if (!body.title?.trim() || !body.localityId) {
-        return NextResponse.json(
-          { error: "Stream title and locality are required." },
-          { status: 400 }
-        );
-      }
-      const stream = createCommunityLiveStream({
-        hostId: body.hostId ?? "user-kavitha",
-        hostName: body.hostName ?? "Karavali Broadcaster",
-        hostUsername: body.hostUsername ?? "karavali_live",
-        title: body.title,
-        summary: body.summary ?? "",
-        localityId: body.localityId,
-        category: body.category ?? "celebrations",
-      });
-      return NextResponse.json({ stream }, { status: 201 });
+      return NextResponse.json(
+        {
+          error:
+            "Forbidden: public users cannot start public live broadcasts. Only authorised Pethri newsroom staff can operate live broadcasts.",
+        },
+        { status: 403 }
+      );
     }
 
     if (body.action === "send_live_chat") {

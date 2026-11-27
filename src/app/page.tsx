@@ -6,22 +6,26 @@ import {
   ArrowRight,
   ArrowUpRight,
   Calendar,
-  Camera,
   Compass,
   Eye,
   FileEdit,
+  FileText,
   Flame,
   MapPin,
   Megaphone,
   Play,
-  Radio,
   ShieldCheck,
   Users,
 } from "lucide-react";
 import { MomentLightbox } from "@/components/MomentLightbox";
 import {
+  AnimatedLiveIndicator,
+  AnimatedNavPill,
   EditorialReveal,
   GsapImageMask,
+  HorizontalCarousel,
+  MaskedHeadlineReveal,
+  ScrollParallaxLayer,
   StaggerGroup,
   StaggerItem,
 } from "@/components/MotionPrimitives";
@@ -42,11 +46,12 @@ import type {
   PostItem,
 } from "@/types/pethri";
 
-export default function KaravaliFrontpage() {
+export default function PethriPulseHomePage() {
   const {
     localities,
     activeLocalityId,
     setActiveLocalityId,
+    requireAuth,
     language,
     dict,
     showToast,
@@ -97,7 +102,7 @@ export default function KaravaliFrontpage() {
     () => scopedPosts.filter((p) => p.sourceKind === "newsroom"),
     [scopedPosts]
   );
-  const citizenPosts = useMemo(
+  const reviewedCommunityPosts = useMemo(
     () => scopedPosts.filter((p) => p.sourceKind === "citizen"),
     [scopedPosts]
   );
@@ -120,8 +125,11 @@ export default function KaravaliFrontpage() {
     .filter((p) => p.sourceKind !== "sponsored")
     .sort((a, b) => b.likesCount + b.sharesCount - (a.likesCount + a.sharesCount))
     .slice(0, 4);
-  const moments = useMemo(() => posts.filter((p) => p.isMoment), [posts]);
-  const primaryLive = liveStreams[0] ?? DEMO_LIVE_STREAMS[0];
+  const highlights = useMemo(() => posts.filter((p) => p.isMoment), [posts]);
+  const officialLive =
+    liveStreams.find((s) => s.streamSourceKind === "official_newsroom") ??
+    liveStreams[0] ??
+    DEMO_LIVE_STREAMS[0];
 
   const getTitle = (p: PostItem) =>
     language === "kn" && p.headlineKn ? p.headlineKn : p.headline;
@@ -129,6 +137,7 @@ export default function KaravaliFrontpage() {
     language === "kn" && p.bodyKn ? p.bodyKn : p.body;
 
   const handleMomentLike = async (postId: string) => {
+    if (!requireAuth("react to visual highlights")) return;
     const res = await fetch(`/api/posts/${postId}/engage`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -141,6 +150,7 @@ export default function KaravaliFrontpage() {
   };
 
   const handleEventRsvp = async (eventId: string) => {
+    if (!requireAuth("RSVP to Karavali events")) return;
     const res = await fetch("/api/broadcast", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -161,22 +171,21 @@ export default function KaravaliFrontpage() {
   };
 
   return (
-    <div className="bg-[#F7F6EF]">
-      {/* 1. COMPACT KARAVALI EDITION & LOCALITY PILL BAR (News-First Above the Fold) */}
-      <div className="border-b border-[#202820]/10 bg-white/80">
+    <div className="bg-[#F8F7F4]">
+      {/* 1. PETHRI PULSE EDITION BAR & LOCALITY FILTER */}
+      <div className="border-b border-[#E5E3DC] bg-white">
         <div className="mx-auto max-w-[1440px] px-4 py-2.5 flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-[#202820]">
-              KARAVALI EDITION • MANGALURU · UDUPI · MANIPAL · PETHRI
+            <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-[#1B5E43]">
+              PETHRI PULSE • KARAVALI EDITION
             </span>
             {leadStory?.isBreaking && (
               <Link
                 href={`/article/${leadStory.id}`}
-                className="hidden xl:inline-flex items-center gap-1.5 rounded-full bg-[#B7F36B] border border-[#202820]/20 px-3 py-0.5 text-[11px] font-extrabold text-[#202820]"
+                className="hidden xl:inline-flex items-center gap-2 rounded-full bg-[#F8F7F4] border border-[#D94E34]/30 px-3 py-0.5 text-[11px] font-bold text-[#181917] hover:border-[#398BFF] transition-colors"
               >
-                <span className="h-1.5 w-1.5 rounded-full bg-[#202820] animate-ping" />
-                {dict.sections.breakingNews}: {getTitle(leadStory).slice(0, 52)}
-                ...
+                <AnimatedLiveIndicator label={dict.sections.breakingNews} />
+                <span>{getTitle(leadStory).slice(0, 52)}...</span>
               </Link>
             )}
           </div>
@@ -186,12 +195,15 @@ export default function KaravaliFrontpage() {
               type="button"
               onClick={() => setActiveLocalityId("all")}
               className={cn(
-                "shrink-0 px-3 py-1 text-xs font-bold rounded-full transition-colors",
+                "relative z-0 shrink-0 px-3 py-1 text-xs font-bold rounded-full border transition-colors",
                 activeLocalityId === "all"
-                  ? "bg-[#202820] text-[#B7F36B]"
-                  : "bg-[#DCEBCB]/60 text-[#202820] hover:bg-[#DCEBCB]"
+                  ? "text-white border-[#1B5E43]"
+                  : "bg-[#F8F7F4] text-[#181917] border-[#E5E3DC] hover:bg-[#EAF2EE]"
               )}
             >
+              {activeLocalityId === "all" && (
+                <AnimatedNavPill layoutId="home-locality-pill" />
+              )}
               {dict.allRegion}
             </button>
             {localities.map((loc) => (
@@ -200,32 +212,41 @@ export default function KaravaliFrontpage() {
                 type="button"
                 onClick={() => setActiveLocalityId(loc.id)}
                 className={cn(
-                  "shrink-0 px-3 py-1 text-xs font-semibold rounded-full transition-colors",
+                  "relative z-0 shrink-0 px-3 py-1 text-xs font-semibold rounded-full border transition-colors",
                   activeLocalityId === loc.id
-                    ? "bg-[#B7F36B] text-[#202820] border border-[#202820]/25"
-                    : "text-[#525F52] hover:bg-[#DCEBCB]/50 hover:text-[#202820]"
+                    ? "text-white border-[#398BFF] electric-glow"
+                    : "bg-white text-[#5A605C] border-transparent hover:bg-[#EAF2EE] hover:text-[#1B5E43]"
                 )}
               >
+                {activeLocalityId === loc.id && (
+                  <AnimatedNavPill
+                    layoutId="home-locality-pill"
+                    className="bg-[#398BFF]"
+                  />
+                )}
                 {language === "kn" && loc.nameKn ? loc.nameKn : loc.name}
               </button>
             ))}
           </div>
         </div>
 
-        {/* Category Filter Strip */}
-        <div className="border-t border-[#202820]/5 bg-[#F7F6EF]/70">
+        {/* Beat Category Pills */}
+        <div className="border-t border-[#E5E3DC] bg-[#F8F7F4]">
           <div className="mx-auto max-w-[1440px] px-4 py-2 flex items-center gap-2 overflow-x-auto no-scrollbar">
             <button
               type="button"
               onClick={() => setSelectedCategory("all")}
               className={cn(
-                "shrink-0 px-3 py-1 text-xs font-bold rounded-full",
+                "relative z-0 shrink-0 px-3 py-1 text-xs font-bold rounded-full transition-colors",
                 selectedCategory === "all"
-                  ? "bg-[#202820] text-[#B7F36B]"
-                  : "text-[#525F52] hover:bg-white"
+                  ? "text-white"
+                  : "text-[#5A605C] hover:bg-white hover:text-[#181917]"
               )}
             >
-              Top Stories
+              {selectedCategory === "all" && (
+                <AnimatedNavPill layoutId="home-category-pill" />
+              )}
+              Pethri Pulse
             </button>
             {(Object.keys(CATEGORY_META) as PostCategory[]).map((cat) => (
               <button
@@ -233,12 +254,18 @@ export default function KaravaliFrontpage() {
                 type="button"
                 onClick={() => setSelectedCategory(cat)}
                 className={cn(
-                  "shrink-0 px-3 py-1 text-xs font-semibold rounded-full",
+                  "relative z-0 shrink-0 px-3 py-1 text-xs font-semibold rounded-full border transition-colors",
                   selectedCategory === cat
-                    ? "bg-[#DCEBCB] text-[#202820] border border-[#202820]/20"
-                    : "text-[#525F52] hover:bg-white"
+                    ? "text-[#1B5E43] border-[#1B5E43]/30"
+                    : "border-transparent text-[#5A605C] hover:bg-white hover:text-[#181917]"
                 )}
               >
+                {selectedCategory === cat && (
+                  <AnimatedNavPill
+                    layoutId="home-category-pill"
+                    className="bg-[#EAF2EE]"
+                  />
+                )}
                 {language === "kn"
                   ? CATEGORY_META[cat].labelKn
                   : CATEGORY_META[cat].label}
@@ -248,84 +275,16 @@ export default function KaravaliFrontpage() {
         </div>
       </div>
 
-      {/* 2. PETHRI MOMENTS & QUICK CAPTURE STRIP (Content-First on Mobile & Desktop) */}
-      <section
-        aria-label="Pethri Stories and Moments"
-        className="border-b border-[#202820]/10 bg-white/60"
-      >
-        <div className="mx-auto max-w-[1440px] px-4 py-3 flex items-center gap-3 overflow-x-auto no-scrollbar">
-          <Link
-            href="/report?mode=moment"
-            className="shrink-0 flex items-center gap-2.5 rounded-2xl border border-dashed border-[#202820]/30 bg-[#DCEBCB]/70 px-3.5 py-2 hover:bg-[#B7F36B] transition-colors"
-          >
-            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#202820] text-[#B7F36B]">
-              <Camera className="h-4 w-4" />
-            </span>
-            <div>
-              <p className="text-xs font-extrabold text-[#202820]">
-                {dict.drawer.shareMoment}
-              </p>
-              <p className="text-[10px] text-[#525F52]">Photo / Short</p>
-            </div>
-          </Link>
-
-          <Link
-            href="/live?start=true"
-            className="shrink-0 flex items-center gap-2.5 rounded-2xl border border-[#202820]/15 bg-[#202820] px-3.5 py-2 text-[#B7F36B] hover:opacity-90 transition-opacity"
-          >
-            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#B7F36B] text-[#202820]">
-              <Radio className="h-4 w-4" />
-            </span>
-            <div>
-              <p className="text-xs font-extrabold">{dict.drawer.goLive}</p>
-              <p className="text-[10px] text-[#C9E8D5]">
-                {liveStreams.length} live now
-              </p>
-            </div>
-          </Link>
-
-          {moments.map((m, idx) => (
-            <button
-              key={m.id}
-              type="button"
-              onClick={() => setMomentIndex(idx)}
-              className="group shrink-0 flex items-center gap-2.5 rounded-2xl border border-[#202820]/10 bg-white p-1.5 pr-3.5 hover:border-[#202820] transition-colors text-left"
-            >
-              <div className="relative h-11 w-11 shrink-0 overflow-hidden rounded-xl ring-2 ring-[#B7F36B]">
-                <img
-                  src={m.media[0]?.url ?? "/images/photos/church-feast.jpg"}
-                  alt={getTitle(m)}
-                  className="h-full w-full object-cover"
-                />
-                <span className="absolute bottom-0.5 right-0.5 rounded bg-[#202820]/85 p-0.5 text-[#B7F36B]">
-                  <Play className="h-2.5 w-2.5 fill-current" />
-                </span>
-              </div>
-              <div className="max-w-36">
-                <p className="text-[10px] font-bold uppercase text-[#525F52]">
-                  {m.localityName}
-                </p>
-                <p className="text-xs font-bold text-[#202820] line-clamp-1 group-hover:underline">
-                  {getTitle(m)}
-                </p>
-              </div>
-            </button>
-          ))}
-        </div>
-      </section>
-
-      {/* 3. ASYMMETRIC LUXE STAGE: GSAP PARALLAX LEAD STORY + PETHRI LIVE + KARAVALI WIRE */}
+      {/* 2. CINEMATIC HERO STAGE */}
       <section className="mx-auto max-w-[1440px] px-4 py-6">
         <div className="grid gap-6 lg:grid-cols-12 items-start">
-          {/* Lead Photojournalism Feature (7 cols) */}
+          {/* Lead Verified Story (7 cols) */}
           <div className="lg:col-span-7">
             {leadStory ? (
-              <article className="overflow-hidden rounded-3xl border border-[#202820]/15 bg-white">
-                <Link
-                  href={`/article/${leadStory.id}`}
-                  className="block group"
-                >
+              <article className="overflow-hidden rounded-3xl border border-[#E5E3DC] bg-white shadow-xs transition-all hover:border-[#398BFF]/40 hover:shadow-md">
+                <Link href={`/article/${leadStory.id}`} className="block group">
                   <GsapImageMask
+                    immediate
                     src={
                       leadStory.media[0]?.url ??
                       "/images/photos/pethri-town.jpg"
@@ -335,12 +294,13 @@ export default function KaravaliFrontpage() {
                   >
                     <div className="absolute top-4 left-4 flex items-center gap-2 z-10">
                       {leadStory.isBreaking && (
-                        <span className="rounded-full bg-[#B7F36B] px-3 py-1 text-[10px] font-extrabold uppercase tracking-widest text-[#202820]">
-                          {dict.sections.breakingNews}
-                        </span>
+                        <AnimatedLiveIndicator
+                          label={dict.sections.breakingNews}
+                          showWaveform
+                        />
                       )}
-                      <span className="rounded-full bg-[#202820]/90 backdrop-blur-sm px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-[#F7F6EF]">
-                        {dict.sections.newsroomDispatch}
+                      <span className="rounded-full bg-[#1B5E43]/95 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-white">
+                        Verified Newsroom
                       </span>
                     </div>
                   </GsapImageMask>
@@ -348,8 +308,8 @@ export default function KaravaliFrontpage() {
 
                 <div className="p-6 sm:p-7">
                   <div className="flex items-center justify-between gap-2">
-                    <span className="inline-flex items-center gap-1 text-xs font-bold uppercase tracking-wider text-[#525F52]">
-                      <MapPin className="h-3.5 w-3.5 text-[#202820]" />
+                    <span className="inline-flex items-center gap-1 text-xs font-bold uppercase tracking-wider text-[#1B5E43]">
+                      <MapPin className="h-3.5 w-3.5" />
                       {leadStory.localityName} •{" "}
                       {language === "kn"
                         ? CATEGORY_META[leadStory.category].labelKn
@@ -362,17 +322,19 @@ export default function KaravaliFrontpage() {
                   </div>
 
                   <Link href={`/article/${leadStory.id}`} className="group block">
-                    <h1 className="mt-3 font-editorial text-3xl sm:text-[44px] leading-[1.08] text-[#202820] group-hover:underline">
-                      {getTitle(leadStory)}
-                    </h1>
+                    <MaskedHeadlineReveal delay={0.08}>
+                      <h1 className="mt-3 font-editorial text-3xl sm:text-[44px] leading-[1.08] text-[#181917] group-hover:text-[#1B5E43] transition-colors">
+                        {getTitle(leadStory)}
+                      </h1>
+                    </MaskedHeadlineReveal>
                   </Link>
 
-                  <p className="mt-3 text-sm sm:text-base leading-relaxed text-[#525F52]">
+                  <p className="mt-3 text-sm sm:text-base leading-relaxed text-[#5A605C]">
                     {getBody(leadStory)}
                   </p>
 
                   {leadStory.corrections.length > 0 && (
-                    <div className="mt-4 inline-flex items-center gap-1.5 rounded-xl bg-[#C9E8D5]/55 px-3 py-1.5 text-xs font-semibold text-[#202820]">
+                    <div className="mt-4 inline-flex items-center gap-1.5 rounded-xl bg-[#EAF2EE] border border-[#E5E3DC] px-3 py-1.5 text-xs font-semibold text-[#1B5E43]">
                       <FileEdit className="h-3.5 w-3.5 shrink-0" />
                       <span>
                         Correction:{" "}
@@ -381,23 +343,23 @@ export default function KaravaliFrontpage() {
                     </div>
                   )}
 
-                  <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-[#202820]/10 pt-4 text-xs">
+                  <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-[#E5E3DC] pt-4 text-xs">
                     <div className="flex items-center gap-2">
                       <img
                         src={leadStory.author.avatarUrl}
                         alt={leadStory.author.fullName}
-                        className="h-7 w-7 rounded-full object-cover"
+                        className="h-7 w-7 rounded-full object-cover ring-1 ring-[#E5E3DC]"
                       />
-                      <span className="font-bold text-[#202820]">
+                      <span className="font-bold text-[#181917]">
                         {leadStory.author.fullName}
                       </span>
-                      <span className="text-[#525F52]">
+                      <span className="text-[#5A605C]">
                         • <RelativeTime iso={leadStory.createdAt} />
                       </span>
                     </div>
                     <Link
                       href={`/article/${leadStory.id}`}
-                      className="inline-flex items-center gap-1 rounded-full bg-[#DCEBCB] px-4 py-1.5 font-extrabold text-[#202820] hover:bg-[#B7F36B] transition-colors"
+                      className="inline-flex items-center gap-1 rounded-full bg-[#EAF2EE] px-4 py-1.5 font-extrabold text-[#1B5E43] hover:bg-[#398BFF] hover:text-white transition-all"
                     >
                       {dict.sections.readFullReport}{" "}
                       <ArrowUpRight className="h-4 w-4" />
@@ -406,49 +368,45 @@ export default function KaravaliFrontpage() {
                 </div>
               </article>
             ) : (
-              <div className="rounded-3xl border border-[#202820]/15 bg-white p-8 text-center text-sm text-[#525F52]">
-                No stories match this filter yet.
+              <div className="rounded-3xl border border-[#E5E3DC] bg-white p-8 text-center text-sm text-[#5A605C]">
+                No verified articles match this filter yet.
               </div>
             )}
           </div>
 
-          {/* Right Stage (5 cols): Pethri Live Stream + Karavali Wire */}
+          {/* Right Stage (5 cols): Official Live Broadcast + Nearby Developments Wire */}
           <div className="lg:col-span-5 space-y-6">
-            {/* Pethri Live Broadcast Card */}
-            <EditorialReveal delay={0.05}>
-              <div className="overflow-hidden rounded-3xl border border-[#202820]/15 bg-[#202820] text-[#F7F6EF]">
-                <div className="relative h-48 bg-black">
+            <EditorialReveal delay={0.06}>
+              <div className="overflow-hidden rounded-3xl border border-[#E5E3DC] bg-[#1B5E43] text-white shadow-sm">
+                <div className="relative h-48 bg-[#181917]">
                   <img
-                    src={primaryLive.posterUrl}
-                    alt={primaryLive.title}
+                    src={officialLive.posterUrl}
+                    alt={officialLive.title}
                     className="h-full w-full object-cover opacity-85"
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-[#202820] via-transparent to-black/35" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#1B5E43] via-transparent to-black/35" />
                   <div className="absolute top-3.5 left-3.5 flex items-center gap-2">
-                    <span className="inline-flex items-center gap-1.5 rounded-full bg-[#B7F36B] px-3 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-[#202820]">
-                      <span className="h-1.5 w-1.5 rounded-full bg-[#202820] animate-ping" />
-                      {dict.sections.liveNow}
-                    </span>
-                    <span className="inline-flex items-center gap-1 rounded-full bg-black/60 backdrop-blur-sm px-2.5 py-0.5 font-mono text-[10px]">
-                      <Eye className="h-3 w-3 text-[#B7F36B]" />
-                      {primaryLive.viewerCount}
+                    <AnimatedLiveIndicator label="OFFICIAL LIVE" showWaveform />
+                    <span className="inline-flex items-center gap-1 rounded-full bg-[#181917]/75 px-2.5 py-0.5 font-mono text-[10px] text-white">
+                      <Eye className="h-3 w-3 text-[#398BFF]" />
+                      {officialLive.viewerCount}
                     </span>
                   </div>
                 </div>
                 <div className="p-5">
-                  <p className="font-mono text-[10px] font-bold uppercase tracking-widest text-[#C9E8D5]">
-                    {primaryLive.channelName} • {primaryLive.localityName}
+                  <p className="font-mono text-[10px] font-bold uppercase tracking-widest text-[#EAF2EE]/80">
+                    {officialLive.channelName} • {officialLive.localityName}
                   </p>
-                  <h2 className="mt-1.5 font-editorial text-2xl leading-snug text-[#F7F6EF]">
-                    {primaryLive.title}
+                  <h2 className="mt-1.5 font-editorial text-2xl leading-snug text-white">
+                    {officialLive.title}
                   </h2>
                   <div className="mt-4 flex items-center justify-between text-xs">
-                    <span className="text-[#C9E8D5]">
-                      Host: {primaryLive.hostName}
+                    <span className="text-[#EAF2EE]/85">
+                      Host: {officialLive.hostName}
                     </span>
                     <Link
                       href="/live"
-                      className="inline-flex items-center gap-1.5 rounded-full bg-[#B7F36B] px-4 py-1.5 text-xs font-extrabold text-[#202820] hover:bg-[#DCEBCB] transition-colors"
+                      className="inline-flex items-center gap-1.5 rounded-full bg-[#398BFF] px-4 py-1.5 text-xs font-extrabold text-white electric-glow hover:bg-white hover:text-[#1B5E43] transition-colors"
                     >
                       <Play className="h-3 w-3 fill-current" />
                       {dict.sections.watchLive}
@@ -458,22 +416,21 @@ export default function KaravaliFrontpage() {
               </div>
             </EditorialReveal>
 
-            {/* Karavali Chronological Wire */}
             <EditorialReveal delay={0.1}>
-              <div className="rounded-3xl border border-[#202820]/12 bg-white p-6">
-                <div className="flex items-center justify-between pb-3 border-b border-[#202820]/10">
-                  <span className="inline-flex items-center gap-1.5 text-xs font-extrabold uppercase tracking-widest text-[#202820]">
-                    <Flame className="h-4 w-4 text-[#202820]" />
-                    {dict.sections.latestWire}
+              <div className="rounded-3xl border border-[#E5E3DC] bg-white p-6">
+                <div className="flex items-center justify-between pb-3 border-b border-[#E5E3DC]">
+                  <span className="inline-flex items-center gap-1.5 text-xs font-extrabold uppercase tracking-widest text-[#1B5E43]">
+                    <Flame className="h-4 w-4" />
+                    Nearby Developments
                   </span>
                   <Link
                     href="/feed"
-                    className="text-xs font-bold text-[#202820] underline"
+                    className="text-xs font-bold text-[#398BFF] hover:underline"
                   >
                     {dict.sections.openFeed} →
                   </Link>
                 </div>
-                <div className="divide-y divide-[#202820]/10">
+                <div className="divide-y divide-[#E5E3DC]">
                   {latestWire.map((item) => (
                     <Link
                       key={item.id}
@@ -481,18 +438,23 @@ export default function KaravaliFrontpage() {
                       className="block py-3.5 first:pt-3.5 last:pb-0 group"
                     >
                       <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider">
-                        <span className="inline-flex items-center gap-1.5 text-[#525F52]">
-                          <span className="h-1.5 w-1.5 rounded-full bg-[#B7F36B] ring-1 ring-[#202820]/40" />
+                        <span className="inline-flex items-center gap-1.5 text-[#5A605C]">
+                          <span
+                            className={cn(
+                              "h-1.5 w-1.5 rounded-full",
+                              item.isBreaking ? "bg-[#D94E34]" : "bg-[#398BFF]"
+                            )}
+                          />
                           {item.localityName} •{" "}
                           {item.sourceKind === "newsroom"
-                            ? "Newsroom"
-                            : "Community"}
+                            ? "Editorial"
+                            : "Reviewed Tip"}
                         </span>
-                        <span className="font-mono text-[#525F52]">
+                        <span className="font-mono text-[#5A605C]">
                           <RelativeTime iso={item.createdAt} />
                         </span>
                       </div>
-                      <h3 className="mt-1 font-editorial text-xl leading-snug text-[#202820] group-hover:underline">
+                      <h3 className="mt-1 font-editorial text-xl leading-snug text-[#181917] group-hover:text-[#1B5E43] transition-colors">
                         {getTitle(item)}
                       </h3>
                     </Link>
@@ -504,42 +466,93 @@ export default function KaravaliFrontpage() {
         </div>
       </section>
 
-      {/* 4. TIARA-INSPIRED DEEP FOREST × NEON LIME SPOTLIGHT BAND */}
-      <section className="bg-[#202820] text-[#F7F6EF] bg-forest-grid py-12 border-y border-[#202820]">
+      {/* 3. HORIZONTAL VISUAL HIGHLIGHTS CAROUSEL */}
+      <section className="border-y border-[#E5E3DC] bg-[#EAF2EE]/60 py-8">
         <div className="mx-auto max-w-[1440px] px-4">
-          <div className="flex flex-wrap items-end justify-between gap-4 pb-6 border-b border-white/15">
-            <div>
-              <p className="font-mono text-[11px] font-bold uppercase tracking-widest text-[#B7F36B]">
-                MANGALURU · UDUPI · MANIPAL · KUNDAPURA · PETHRI
-              </p>
-              <h2 className="mt-1 font-display text-2xl sm:text-3xl font-extrabold">
-                {dict.sections.trendingKaravali}
-              </h2>
+          <HorizontalCarousel
+            subtitle="CURATED KARAVALI STORIES"
+            title="Visual Highlights & Video Dispatches"
+            rightSlot={
+              <Link
+                href="/moments"
+                className="text-xs font-extrabold text-[#398BFF] hover:underline mr-2"
+              >
+                Open Story Viewer →
+              </Link>
+            }
+          >
+            {highlights.map((m, idx) => (
+              <button
+                key={m.id}
+                type="button"
+                onClick={() => setMomentIndex(idx)}
+                className="group relative shrink-0 w-56 sm:w-64 h-72 overflow-hidden rounded-2xl border border-[#E5E3DC] bg-[#181917] text-left transition-all hover:border-[#398BFF] hover:shadow-lg"
+              >
+                <img
+                  src={m.media[0]?.url ?? "/images/photos/church-feast.jpg"}
+                  alt={getTitle(m)}
+                  className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-[#181917] via-[#181917]/25 to-transparent" />
+                <div className="absolute top-3 left-3 flex items-center gap-2">
+                  <span className="rounded-full bg-white px-2.5 py-0.5 text-[10px] font-extrabold text-[#1B5E43]">
+                    {m.localityName}
+                  </span>
+                </div>
+                <div className="absolute bottom-3.5 left-3.5 right-3.5">
+                  <p className="font-editorial text-lg leading-snug text-white line-clamp-2 group-hover:text-[#EAF2EE]">
+                    {getTitle(m)}
+                  </p>
+                  <p className="mt-1 text-[10px] font-semibold text-white/80">
+                    {m.author.fullName}
+                  </p>
+                </div>
+              </button>
+            ))}
+          </HorizontalCarousel>
+        </div>
+      </section>
+
+      {/* 4. RECOMMENDED & TRENDING ACROSS KARAVALI */}
+      <section className="overflow-hidden bg-[#1B5E43] text-white bg-forest-grid py-12 border-b border-[#E5E3DC]">
+        <div className="mx-auto max-w-[1440px] px-4">
+          <ScrollParallaxLayer speed={14}>
+            <div className="flex flex-wrap items-end justify-between gap-4 pb-6 border-b border-white/15">
+              <div>
+                <p className="font-mono text-[11px] font-bold uppercase tracking-widest text-[#EAF2EE]/80">
+                  RECOMMENDED ACROSS MANGALURU · UDUPI · MANIPAL · PETHRI
+                </p>
+                <MaskedHeadlineReveal triggerOnScroll>
+                  <h2 className="mt-1 font-display text-2xl sm:text-3xl font-extrabold">
+                    {dict.sections.trendingKaravali}
+                  </h2>
+                </MaskedHeadlineReveal>
+              </div>
+              <Link
+                href="/live"
+                className="inline-flex items-center gap-1.5 rounded-full bg-white px-4 py-2 text-xs font-extrabold text-[#1B5E43] hover:bg-[#398BFF] hover:text-white transition-colors"
+              >
+                Official Broadcasts <ArrowRight className="h-4 w-4" />
+              </Link>
             </div>
-            <Link
-              href="/moments"
-              className="inline-flex items-center gap-1.5 rounded-full bg-[#B7F36B] px-4 py-2 text-xs font-extrabold text-[#202820] hover:bg-[#DCEBCB]"
-            >
-              Channels &amp; Shorts <ArrowRight className="h-4 w-4" />
-            </Link>
-          </div>
+          </ScrollParallaxLayer>
 
           <StaggerGroup className="mt-7 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
             {trendingStories.map((story, idx) => (
               <StaggerItem key={story.id}>
                 <Link
                   href={`/article/${story.id}`}
-                  className="group block border-t border-white/15 pt-4 hover:border-[#B7F36B] transition-colors"
+                  className="group block border-t border-white/15 pt-4 hover:border-[#398BFF] transition-colors"
                 >
                   <div className="flex items-baseline justify-between">
-                    <span className="font-display text-3xl font-extrabold text-white/25 group-hover:text-[#B7F36B] transition-colors">
+                    <span className="font-display text-3xl font-extrabold text-white/30 group-hover:text-[#398BFF] transition-colors">
                       0{idx + 1}
                     </span>
-                    <span className="rounded-full bg-white/10 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[#C9E8D5]">
+                    <span className="rounded-full bg-white/10 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[#EAF2EE]">
                       {story.localityName}
                     </span>
                   </div>
-                  <div className="mt-3 h-40 overflow-hidden rounded-2xl bg-black">
+                  <div className="mt-3 h-40 overflow-hidden rounded-2xl bg-[#181917]">
                     <img
                       src={
                         story.media[0]?.url ?? "/images/photos/pethri-town.jpg"
@@ -548,11 +561,11 @@ export default function KaravaliFrontpage() {
                       className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
                     />
                   </div>
-                  <h3 className="mt-3 font-editorial text-xl leading-snug text-[#F7F6EF] group-hover:text-[#B7F36B]">
+                  <h3 className="mt-3 font-editorial text-xl leading-snug text-white group-hover:text-[#EAF2EE]">
                     {getTitle(story)}
                   </h3>
-                  <p className="mt-1.5 text-[11px] text-[#C9E8D5]/75">
-                    {story.likesCount} likes • {story.sharesCount} shares
+                  <p className="mt-1.5 text-[11px] text-[#EAF2EE]/75">
+                    {story.likesCount} reactions • {story.commentsCount} comments
                   </p>
                 </Link>
               </StaggerItem>
@@ -561,27 +574,26 @@ export default function KaravaliFrontpage() {
         </div>
       </section>
 
-      {/* 5. SEPARATED VERIFIED NEWSROOM vs CITIZEN COMMUNITY + EVENTS + SPONSORED */}
+      {/* 5. SEPARATED EDITORIAL REPORTING vs REVIEWED COMMUNITY HIGHLIGHTS + EVENTS */}
       <section className="mx-auto max-w-[1440px] px-4 py-10">
         <div className="grid gap-8 lg:grid-cols-12 items-start">
-          {/* Left 8 Cols */}
           <div className="lg:col-span-8 space-y-10">
             {secondaryNewsroom.length > 0 && (
               <EditorialReveal>
-                <div className="flex items-center justify-between border-b border-[#202820]/15 pb-3 mb-5">
+                <div className="flex items-center justify-between border-b border-[#E5E3DC] pb-3 mb-5">
                   <div>
-                    <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-[#525F52]">
-                      EDITORIALLY VERIFIED JOURNALISM
+                    <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-[#1B5E43]">
+                      AUTHORISED NEWSROOM REPORTING
                     </span>
-                    <h2 className="font-display text-xl font-extrabold text-[#202820]">
+                    <h2 className="font-display text-xl font-extrabold text-[#181917]">
                       {dict.sections.newsroomDispatch}
                     </h2>
                   </div>
                   <Link
                     href="/feed?sourceKind=newsroom"
-                    className="text-xs font-bold text-[#202820] underline"
+                    className="text-xs font-bold text-[#398BFF] hover:underline"
                   >
-                    All Newsroom →
+                    All News →
                   </Link>
                 </div>
 
@@ -590,9 +602,9 @@ export default function KaravaliFrontpage() {
                     <Link
                       key={story.id}
                       href={`/article/${story.id}`}
-                      className="group block rounded-2xl border border-[#202820]/12 bg-white p-4 hover:border-[#202820] transition-all"
+                      className="group block rounded-2xl border border-[#E5E3DC] bg-white p-4 hover:border-[#398BFF]/55 hover:shadow-md transition-all"
                     >
-                      <div className="h-48 overflow-hidden rounded-xl bg-[#202820]">
+                      <div className="h-48 overflow-hidden rounded-xl bg-[#181917]">
                         <img
                           src={
                             story.media[0]?.url ??
@@ -603,7 +615,7 @@ export default function KaravaliFrontpage() {
                         />
                       </div>
                       <div className="mt-3 flex items-center justify-between gap-2">
-                        <span className="text-[11px] font-bold uppercase text-[#525F52]">
+                        <span className="text-[11px] font-bold uppercase text-[#1B5E43]">
                           {story.localityName} •{" "}
                           {CATEGORY_META[story.category].short}
                         </span>
@@ -612,10 +624,10 @@ export default function KaravaliFrontpage() {
                           compact
                         />
                       </div>
-                      <h3 className="mt-2 font-editorial text-2xl leading-snug text-[#202820] group-hover:underline">
+                      <h3 className="mt-2 font-editorial text-2xl leading-snug text-[#181917] group-hover:text-[#1B5E43] transition-colors">
                         {getTitle(story)}
                       </h3>
-                      <p className="mt-1.5 text-xs leading-relaxed text-[#525F52] line-clamp-2">
+                      <p className="mt-1.5 text-xs leading-relaxed text-[#5A605C] line-clamp-2">
                         {getBody(story)}
                       </p>
                     </Link>
@@ -624,31 +636,31 @@ export default function KaravaliFrontpage() {
               </EditorialReveal>
             )}
 
-            {/* Clearly Separated Citizen Community Contributions */}
             <EditorialReveal>
-              <div className="flex items-center justify-between border-b border-[#202820]/15 pb-3 mb-5">
+              <div className="flex items-center justify-between border-b border-[#E5E3DC] pb-3 mb-5">
                 <div>
-                  <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-[#525F52]">
-                    RESIDENT POSTS • SEPARATE FROM NEWSROOM
+                  <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-[#1B5E43]">
+                    EDITORIALLY APPROVED CONTRIBUTIONS • CLEARLY SEPARATED
                   </span>
-                  <h2 className="font-display text-xl font-extrabold text-[#202820]">
-                    {dict.sections.citizenDesk}
+                  <h2 className="font-display text-xl font-extrabold text-[#181917]">
+                    Reviewed Community Reports
                   </h2>
                 </div>
                 <Link
                   href="/report"
-                  className="rounded-full bg-[#202820] px-4 py-1.5 text-xs font-bold text-[#B7F36B] hover:opacity-90"
+                  className="inline-flex items-center gap-1.5 rounded-full bg-[#EAF2EE] border border-[#E5E3DC] px-4 py-1.5 text-xs font-extrabold text-[#1B5E43] hover:bg-[#398BFF] hover:text-white hover:border-[#398BFF] transition-colors"
                 >
-                  + {dict.actions.reportNews}
+                  <FileText className="h-3.5 w-3.5" />
+                  Submit Private Tip
                 </Link>
               </div>
 
               <div className="space-y-3">
-                {citizenPosts.slice(0, 4).map((item) => (
+                {reviewedCommunityPosts.slice(0, 4).map((item) => (
                   <Link
                     key={item.id}
                     href={`/article/${item.id}`}
-                    className="group flex flex-col sm:flex-row gap-4 rounded-2xl border border-[#202820]/10 bg-white p-4 hover:border-[#202820] transition-colors"
+                    className="group flex flex-col sm:flex-row gap-4 rounded-2xl border border-[#E5E3DC] bg-white p-4 hover:border-[#398BFF]/55 hover:shadow-xs transition-all"
                   >
                     <img
                       src={
@@ -660,7 +672,7 @@ export default function KaravaliFrontpage() {
                     <div className="flex-1 min-w-0 flex flex-col justify-between">
                       <div>
                         <div className="flex items-center justify-between gap-2">
-                          <span className="text-[10px] font-bold uppercase text-[#525F52]">
+                          <span className="text-[10px] font-bold uppercase text-[#1B5E43]">
                             {item.localityName} •{" "}
                             {CATEGORY_META[item.category].short}
                           </span>
@@ -669,12 +681,12 @@ export default function KaravaliFrontpage() {
                             compact
                           />
                         </div>
-                        <h3 className="mt-1 font-editorial text-xl leading-snug text-[#202820] group-hover:underline">
+                        <h3 className="mt-1 font-editorial text-xl leading-snug text-[#181917] group-hover:text-[#1B5E43] transition-colors">
                           {getTitle(item)}
                         </h3>
                       </div>
-                      <p className="mt-1.5 text-[11px] text-[#525F52]">
-                        {item.author.fullName} •{" "}
+                      <p className="mt-1.5 text-[11px] text-[#5A605C]">
+                        Source: {item.author.fullName} •{" "}
                         <RelativeTime iso={item.createdAt} />
                       </p>
                     </div>
@@ -687,13 +699,13 @@ export default function KaravaliFrontpage() {
           {/* Right 4 Cols */}
           <aside className="lg:col-span-4 space-y-6">
             <EditorialReveal>
-              <div className="rounded-3xl border border-[#202820]/12 bg-[#DCEBCB]/55 p-6">
-                <div className="flex items-center gap-2 text-xs font-extrabold uppercase tracking-wider text-[#202820]">
+              <div className="rounded-3xl border border-[#E5E3DC] bg-[#EAF2EE] p-6">
+                <div className="flex items-center gap-2 text-xs font-extrabold uppercase tracking-wider text-[#1B5E43]">
                   <Compass className="h-4 w-4" />
                   <span>Karavali Discovery</span>
                 </div>
-                <p className="mt-2 text-xs leading-relaxed text-[#525F52]">
-                  Explore hyperlocal streams across Mangaluru, Udupi, Manipal,
+                <p className="mt-2 text-xs leading-relaxed text-[#5A605C]">
+                  Explore verified reporting across Mangaluru, Udupi, Manipal,
                   Kundapura, Pethri, Brahmavar &amp; Barkur.
                 </p>
                 <div className="mt-3 flex flex-wrap gap-1.5">
@@ -703,10 +715,10 @@ export default function KaravaliFrontpage() {
                       type="button"
                       onClick={() => setActiveLocalityId(l.id)}
                       className={cn(
-                        "px-3 py-1 text-[11px] font-bold rounded-full border transition-colors",
+                        "px-3 py-1 text-[11px] font-bold rounded-full border transition-all",
                         activeLocalityId === l.id
-                          ? "border-[#202820] bg-[#202820] text-[#B7F36B]"
-                          : "border-[#202820]/15 bg-white text-[#202820] hover:bg-[#B7F36B]"
+                          ? "border-[#398BFF] bg-[#398BFF] text-white"
+                          : "border-[#E5E3DC] bg-white text-[#181917] hover:border-[#398BFF] hover:text-[#398BFF]"
                       )}
                     >
                       {language === "kn" && l.nameKn ? l.nameKn : l.name}
@@ -715,7 +727,7 @@ export default function KaravaliFrontpage() {
                 </div>
                 <Link
                   href="/explore"
-                  className="mt-4 inline-flex items-center gap-1.5 text-xs font-extrabold text-[#202820] underline"
+                  className="mt-4 inline-flex items-center gap-1.5 text-xs font-extrabold text-[#398BFF] hover:underline"
                 >
                   Open Interactive Map <ArrowRight className="h-3.5 w-3.5" />
                 </Link>
@@ -723,15 +735,15 @@ export default function KaravaliFrontpage() {
             </EditorialReveal>
 
             <EditorialReveal delay={0.05}>
-              <div className="rounded-3xl border border-[#202820]/12 bg-white p-6">
-                <div className="flex items-center justify-between border-b border-[#202820]/10 pb-2.5">
-                  <span className="inline-flex items-center gap-1.5 text-xs font-extrabold uppercase tracking-wider text-[#202820]">
+              <div className="rounded-3xl border border-[#E5E3DC] bg-white p-6">
+                <div className="flex items-center justify-between border-b border-[#E5E3DC] pb-2.5">
+                  <span className="inline-flex items-center gap-1.5 text-xs font-extrabold uppercase tracking-wider text-[#1B5E43]">
                     <Calendar className="h-4 w-4" />
                     {dict.sections.upcomingEvents}
                   </span>
                   <Link
                     href="/directory"
-                    className="text-[11px] font-bold text-[#202820] underline"
+                    className="text-[11px] font-bold text-[#398BFF] hover:underline"
                   >
                     All →
                   </Link>
@@ -740,16 +752,16 @@ export default function KaravaliFrontpage() {
                   {events.slice(0, 2).map((evt) => (
                     <div
                       key={evt.id}
-                      className="border-b border-[#202820]/10 pb-3 last:border-b-0 last:pb-0"
+                      className="border-b border-[#E5E3DC] pb-3 last:border-b-0 last:pb-0"
                     >
-                      <p className="text-[10px] font-bold uppercase text-[#525F52]">
+                      <p className="text-[10px] font-bold uppercase text-[#5A605C]">
                         {evt.localityName} • {evt.venue}
                       </p>
-                      <p className="mt-0.5 text-xs font-bold text-[#202820]">
+                      <p className="mt-0.5 text-xs font-bold text-[#181917]">
                         {evt.title}
                       </p>
                       <div className="mt-2 flex items-center justify-between">
-                        <span className="inline-flex items-center gap-1 text-[11px] text-[#525F52]">
+                        <span className="inline-flex items-center gap-1 text-[11px] text-[#5A605C]">
                           <Users className="h-3 w-3" />
                           {evt.rsvpCount} going
                         </span>
@@ -757,10 +769,10 @@ export default function KaravaliFrontpage() {
                           type="button"
                           onClick={() => handleEventRsvp(evt.id)}
                           className={cn(
-                            "rounded-full px-3 py-1 text-[10px] font-bold transition-colors",
+                            "rounded-full px-3 py-1 text-[10px] font-bold transition-colors border",
                             evt.rsvpedByMe
-                              ? "bg-[#202820] text-[#B7F36B]"
-                              : "border border-[#202820]/25 text-[#202820] hover:bg-[#DCEBCB]"
+                              ? "bg-[#398BFF] border-[#398BFF] text-white"
+                              : "border-[#E5E3DC] bg-white text-[#181917] hover:border-[#398BFF] hover:text-[#398BFF]"
                           )}
                         >
                           {evt.rsvpedByMe
@@ -775,31 +787,31 @@ export default function KaravaliFrontpage() {
             </EditorialReveal>
 
             {sponsoredPosts[0] && (
-              <div className="rounded-3xl border border-amber-300 bg-amber-50/60 p-5">
-                <div className="flex items-center justify-between text-[10px] font-extrabold uppercase tracking-wider text-amber-900">
+              <div className="rounded-3xl border border-[#E5E3DC] bg-white p-5">
+                <div className="flex items-center justify-between text-[10px] font-extrabold uppercase tracking-wider text-[#1B5E43]">
                   <span className="inline-flex items-center gap-1">
                     <Megaphone className="h-3.5 w-3.5" />
                     {dict.sections.sponsoredPartner}
                   </span>
-                  <span>Paid Notice</span>
+                  <span className="text-[#5A605C]">Paid Notice</span>
                 </div>
                 <Link
                   href={`/article/${sponsoredPosts[0].id}`}
-                  className="mt-2 block font-editorial text-xl text-[#202820] hover:underline"
+                  className="mt-2 block font-editorial text-xl text-[#181917] hover:text-[#1B5E43] transition-colors"
                 >
                   {sponsoredPosts[0].headline}
                 </Link>
-                <p className="mt-1 text-xs text-[#525F52] line-clamp-2">
+                <p className="mt-1 text-xs text-[#5A605C] line-clamp-2">
                   {sponsoredPosts[0].body}
                 </p>
-                <p className="mt-2 text-[10px] font-bold text-amber-900">
+                <p className="mt-2 text-[10px] font-bold text-[#1B5E43]">
                   Advertiser: {sponsoredPosts[0].sponsorInfo?.advertiserName}
                 </p>
               </div>
             )}
 
-            <div className="rounded-3xl border border-[#202820]/12 bg-[#C9E8D5]/45 p-5">
-              <div className="flex items-center gap-1.5 text-xs font-extrabold uppercase tracking-wider text-[#202820]">
+            <div className="rounded-3xl border border-[#E5E3DC] bg-white p-5">
+              <div className="flex items-center gap-1.5 text-xs font-extrabold uppercase tracking-wider text-[#1B5E43]">
                 <ShieldCheck className="h-4 w-4" />
                 <span>Karavali Civic Advisories</span>
               </div>
@@ -807,10 +819,15 @@ export default function KaravaliFrontpage() {
                 {DEMO_ANNOUNCEMENTS.slice(0, 2).map((ann) => (
                   <div
                     key={ann.id}
-                    className="border-l-2 border-[#202820] pl-2.5 text-xs"
+                    className={cn(
+                      "border-l-2 pl-2.5 text-xs",
+                      ann.urgency === "urgent"
+                        ? "border-[#D94E34]"
+                        : "border-[#1B5E43]"
+                    )}
                   >
-                    <p className="font-bold text-[#202820]">{ann.title}</p>
-                    <p className="text-[11px] text-[#525F52]">
+                    <p className="font-bold text-[#181917]">{ann.title}</p>
+                    <p className="text-[11px] text-[#5A605C]">
                       {ann.issuer} • {ann.localityName}
                     </p>
                   </div>
@@ -821,9 +838,9 @@ export default function KaravaliFrontpage() {
         </div>
       </section>
 
-      {momentIndex !== null && moments.length > 0 && (
+      {momentIndex !== null && highlights.length > 0 && (
         <MomentLightbox
-          moments={moments}
+          moments={highlights}
           initialIndex={momentIndex}
           onClose={() => setMomentIndex(null)}
           onLike={handleMomentLike}

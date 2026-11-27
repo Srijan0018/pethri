@@ -2,11 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { listPosts } from "@/lib/store";
 
 export async function GET(
-  _req: NextRequest,
+  req: NextRequest,
   context: { params: Promise<{ id: string }> }
 ) {
   const { id } = await context.params;
-  const { posts } = await listPosts({ includePending: true });
+  const viewerId = req.headers.get("x-pethri-actor-id") ?? undefined;
+  const { posts } = await listPosts({ includePending: Boolean(viewerId), viewerId });
   const post = posts.find((p) => p.id === id);
 
   if (!post) {
