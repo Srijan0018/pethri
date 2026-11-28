@@ -182,10 +182,14 @@ export interface LocalEvent {
   localityId: string;
   localityName: string;
   title: string;
+  description?: string;
   category: PostCategory;
   startsAt: string;
+  endsAt?: string | null;
   venue: string;
   organizer: string;
+  imageUrl?: string | null;
+  status?: "draft" | "published" | "cancelled";
   rsvpCount: number;
   rsvpedByMe?: boolean;
   isDemoData?: boolean;

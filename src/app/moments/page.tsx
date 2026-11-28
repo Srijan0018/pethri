@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   Check,
@@ -25,7 +26,8 @@ import {
 import { RelativeTime } from "@/components/RelativeTime";
 import { VerificationBadge } from "@/components/VerificationBadge";
 import { usePethri } from "@/components/PethriProvider";
-import { CATEGORY_META, cn } from "@/lib/utils";
+import { CATEGORY_META, cn, isLocalImageSrc } from "@/lib/utils";
+import { shareContent } from "@/lib/share";
 import type {
   ChannelPlaylist,
   LiveBroadcast,
@@ -77,17 +79,25 @@ export default function VisualHighlightsPage() {
   };
 
   const handleShare = async (postId: string) => {
-    await fetch(`/api/posts/${postId}/engage`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "share" }),
-    });
-    if (navigator.clipboard) {
-      await navigator.clipboard
-        .writeText(`${window.location.origin}/article/${postId}`)
-        .catch(() => {});
+    try {
+      const result = await shareContent({
+        title: current?.headline ?? "Pethri.com story",
+        text: current?.headline,
+        url: `${window.location.origin}/article/${postId}`,
+      });
+      if (result === "cancelled") return;
+      await fetch(`/api/posts/${postId}/engage`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "share" }),
+      });
+      showToast(
+        result === "shared" ? "Story shared" : "Link copied to clipboard",
+        "info"
+      );
+    } catch {
+      showToast("Unable to share this story. Please try copying its URL.", "error");
     }
-    showToast("Link copied to clipboard");
   };
 
   const handleSubscribe = async (playlistId: string) => {
@@ -115,12 +125,12 @@ export default function VisualHighlightsPage() {
   };
 
   return (
-    <div className="min-h-[calc(100vh-110px)] bg-[#1B5E43] text-white bg-forest-grid py-7 px-4">
+    <div className="min-h-[calc(100vh-110px)] bg-[#173FBE] text-white bg-primary-grid py-7 px-4">
       <div className="mx-auto max-w-6xl space-y-8">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <div className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-[#EAF2EE]">
-              <Sparkles className="h-3.5 w-3.5 text-[#398BFF]" />
+            <div className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-[#EEF2FF]">
+              <Sparkles className="h-3.5 w-3.5 text-[#315CFF]" />
               <span>Curated Visual Highlights &amp; Channels</span>
             </div>
             <h1 className="font-display text-2xl sm:text-3xl font-extrabold">
@@ -129,7 +139,7 @@ export default function VisualHighlightsPage() {
           </div>
           <Link
             href="/live"
-            className="inline-flex items-center gap-2 rounded-full bg-white px-5 py-2.5 text-xs font-extrabold text-[#1B5E43] hover:bg-[#398BFF] hover:text-white transition-colors"
+            className="inline-flex items-center gap-2 rounded-full bg-white px-5 py-2.5 text-xs font-extrabold text-[#173FBE] hover:bg-[#315CFF] hover:text-white transition-colors"
           >
             <Radio className="h-4 w-4 text-[#D94E34]" />
             Watch Official Live
@@ -139,11 +149,14 @@ export default function VisualHighlightsPage() {
         {/* Official Live Stage */}
         {broadcast && (
           <EditorialReveal>
-            <section className="overflow-hidden rounded-2xl border border-white/15 bg-[#181917]/75 grid lg:grid-cols-12 shadow-lg">
+            <section className="overflow-hidden rounded-2xl border border-white/15 bg-[#111318]/75 grid lg:grid-cols-12 shadow-lg">
               <div className="lg:col-span-7 relative min-h-[260px] bg-black">
-                <img
+                <Image
                   src={broadcast.posterUrl}
                   alt={broadcast.title}
+                  fill
+                  sizes="(min-width: 1024px) 60vw, 100vw"
+                  unoptimized={!isLocalImageSrc(broadcast.posterUrl)}
                   className="h-full w-full object-cover opacity-85"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/30" />
@@ -153,40 +166,40 @@ export default function VisualHighlightsPage() {
                     showWaveform={broadcast.isLive}
                   />
                   {broadcast.isLive && (
-                    <span className="rounded-full bg-[#181917]/80 px-2.5 py-1 text-xs font-mono">
+                    <span className="rounded-full bg-[#111318]/80 px-2.5 py-1 text-xs font-mono">
                       {broadcast.viewerCount} watching
                     </span>
                   )}
                 </div>
                 <div className="absolute bottom-4 left-4 right-4 flex items-center justify-between">
                   <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-xs font-semibold">
-                    <Play className="h-3.5 w-3.5 fill-current text-[#398BFF]" />
+                    <Play className="h-3.5 w-3.5 fill-current text-[#315CFF]" />
                     {broadcast.channelName}
                   </span>
-                  <span className="text-[11px] text-[#EAF2EE]">
+                  <span className="text-[11px] text-[#EEF2FF]">
                     Started <RelativeTime iso={broadcast.startedAt} />
                   </span>
                 </div>
               </div>
               <div className="lg:col-span-5 p-6 flex flex-col justify-between">
                 <div>
-                  <p className="text-xs font-bold uppercase tracking-wider text-[#398BFF]">
+                  <p className="text-xs font-bold uppercase tracking-wider text-[#315CFF]">
                     Official Broadcast • {broadcast.localityName}
                   </p>
                   <h2 className="mt-2 font-editorial text-2xl sm:text-3xl leading-snug text-white">
                     {broadcast.title}
                   </h2>
-                  <p className="mt-2 text-xs leading-relaxed text-[#EAF2EE]/85">
+                  <p className="mt-2 text-xs leading-relaxed text-[#EEF2FF]/85">
                     {broadcast.summary}
                   </p>
                 </div>
                 <div className="mt-5 border-t border-white/10 pt-4 flex items-center justify-between text-xs">
-                  <span className="text-[#EAF2EE]/80">
+                  <span className="text-[#EEF2FF]/80">
                     Host: <strong className="text-white">{broadcast.hostName}</strong>
                   </span>
                   <Link
                     href="/live"
-                    className="text-[11px] font-bold text-[#398BFF] hover:underline"
+                    className="text-[11px] font-bold text-[#315CFF] hover:underline"
                   >
                     Open Live Chat →
                   </Link>
@@ -200,8 +213,8 @@ export default function VisualHighlightsPage() {
         <EditorialReveal delay={0.05}>
           <section className="space-y-3">
             <div className="flex items-center justify-between">
-              <h2 className="inline-flex items-center gap-2 text-sm font-extrabold uppercase tracking-wider text-[#EAF2EE]">
-                <ListVideo className="h-4 w-4 text-[#398BFF]" />
+              <h2 className="inline-flex items-center gap-2 text-sm font-extrabold uppercase tracking-wider text-[#EEF2FF]">
+                <ListVideo className="h-4 w-4 text-[#315CFF]" />
                 Editorial Video Channels &amp; Playlists
               </h2>
               {selectedPlaylist && (
@@ -211,7 +224,7 @@ export default function VisualHighlightsPage() {
                     setSelectedPlaylist(null);
                     setActiveIdx(0);
                   }}
-                  className="text-xs font-bold text-white underline hover:text-[#398BFF]"
+                  className="text-xs font-bold text-white underline hover:text-[#315CFF]"
                 >
                   Show All Highlights
                 </button>
@@ -224,7 +237,7 @@ export default function VisualHighlightsPage() {
                     className={cn(
                       "rounded-2xl border p-3.5 transition-all hover:-translate-y-1",
                       selectedPlaylist === pl.slug
-                        ? "border-[#398BFF] bg-white text-[#181917] electric-glow"
+                        ? "border-[#315CFF] bg-white text-[#111318] electric-glow"
                         : "border-white/15 bg-white/10 text-white hover:bg-white/15"
                     )}
                   >
@@ -238,9 +251,12 @@ export default function VisualHighlightsPage() {
                       }}
                       className="w-full text-left"
                     >
-                      <img
+                      <Image
                         src={pl.coverUrl}
                         alt={pl.title}
+                        width={320}
+                        height={96}
+                        unoptimized={!isLocalImageSrc(pl.coverUrl)}
                         className="h-24 w-full rounded-xl object-cover"
                       />
                       <p className="mt-2.5 text-sm font-bold">{pl.title}</p>
@@ -248,8 +264,8 @@ export default function VisualHighlightsPage() {
                         className={cn(
                           "mt-0.5 text-[11px] line-clamp-2",
                           selectedPlaylist === pl.slug
-                            ? "text-[#5A605C]"
-                            : "text-[#EAF2EE]/80"
+                            ? "text-[#5B6472]"
+                            : "text-[#EEF2FF]/80"
                         )}
                       >
                         {pl.description}
@@ -259,8 +275,8 @@ export default function VisualHighlightsPage() {
                       <span
                         className={
                           selectedPlaylist === pl.slug
-                            ? "text-[#5A605C]"
-                            : "text-[#EAF2EE]/80"
+                            ? "text-[#5B6472]"
+                            : "text-[#EEF2FF]/80"
                         }
                       >
                         {pl.episodeCount} clips • {pl.subscribersCount}
@@ -271,8 +287,8 @@ export default function VisualHighlightsPage() {
                         className={cn(
                           "inline-flex items-center gap-1 rounded-full px-2.5 py-1 font-bold transition-colors",
                           pl.subscribedByMe
-                            ? "bg-[#EAF2EE] text-[#1B5E43]"
-                            : "bg-[#398BFF] text-white"
+                            ? "bg-[#EEF2FF] text-[#173FBE]"
+                            : "bg-[#315CFF] text-white"
                         )}
                       >
                         {pl.subscribedByMe && <Check className="h-3 w-3" />}
@@ -289,14 +305,14 @@ export default function VisualHighlightsPage() {
         {/* Swipeable Vertical Story Highlights Viewer */}
         <EditorialReveal delay={0.08}>
           <section className="space-y-4">
-            <h2 className="text-sm font-extrabold uppercase tracking-wider text-[#EAF2EE]">
+            <h2 className="text-sm font-extrabold uppercase tracking-wider text-[#EEF2FF]">
               Verified Story Highlights (Swipe Up / Down)
             </h2>
 
             {loading ? (
               <div className="mx-auto h-[540px] max-w-sm animate-pulse rounded-3xl bg-white/10" />
             ) : !current ? (
-              <div className="rounded-2xl border border-white/15 bg-white/10 p-10 text-center text-sm text-[#EAF2EE]">
+              <div className="rounded-2xl border border-white/15 bg-white/10 p-10 text-center text-sm text-[#EEF2FF]">
                 No highlights in this playlist yet.
               </div>
             ) : (
@@ -320,7 +336,7 @@ export default function VisualHighlightsPage() {
                     initial={{ opacity: 0.75, y: 12 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.25 }}
-                    className="relative h-[580px] w-full max-w-[360px] overflow-hidden rounded-2xl border border-white/25 bg-[#181917] shadow-2xl cursor-grab active:cursor-grabbing"
+                    className="relative h-[580px] w-full max-w-[360px] overflow-hidden rounded-2xl border border-white/25 bg-[#111318] shadow-2xl cursor-grab active:cursor-grabbing"
                   >
                     <AnimatePresence mode="wait">
                       {current.media[0]?.mediaType === "video" ? (
@@ -355,17 +371,20 @@ export default function VisualHighlightsPage() {
 
                     <div className="absolute top-4 left-4 right-4 flex items-center justify-between gap-2">
                       <div className="flex items-center gap-2">
-                        <img
+                        <Image
                           src={current.author.avatarUrl}
                           alt={current.author.fullName}
-                          className="h-9 w-9 rounded-full border-2 border-[#398BFF] object-cover"
+                          width={36}
+                          height={36}
+                          unoptimized={!isLocalImageSrc(current.author.avatarUrl)}
+                          className="h-9 w-9 rounded-full border-2 border-[#315CFF] object-cover"
                         />
                         <div>
                           <p className="text-xs font-bold">
                             {current.author.fullName}
                           </p>
-                          <p className="flex items-center gap-1 text-[10px] text-[#EAF2EE]">
-                            <MapPin className="h-3 w-3 text-[#398BFF]" />
+                          <p className="flex items-center gap-1 text-[10px] text-[#EEF2FF]">
+                            <MapPin className="h-3 w-3 text-[#315CFF]" />
                             {current.localityName} •{" "}
                             <RelativeTime iso={current.createdAt} />
                           </p>
@@ -383,7 +402,7 @@ export default function VisualHighlightsPage() {
                         <span
                           className={cn(
                             "flex h-11 w-11 items-center justify-center rounded-full bg-black/60 transition-transform active:scale-90",
-                            current.likedByMe && "bg-[#398BFF] text-white"
+                            current.likedByMe && "bg-[#315CFF] text-white"
                           )}
                         >
                           <Heart
@@ -402,7 +421,7 @@ export default function VisualHighlightsPage() {
                         href={`/article/${current.id}`}
                         className="flex flex-col items-center gap-1"
                       >
-                        <span className="flex h-11 w-11 items-center justify-center rounded-full bg-black/60 hover:bg-[#398BFF] transition-colors">
+                        <span className="flex h-11 w-11 items-center justify-center rounded-full bg-black/60 hover:bg-[#315CFF] transition-colors">
                           <MessageCircle className="h-5 w-5" />
                         </span>
                         <span className="text-[11px] font-bold">
@@ -415,7 +434,7 @@ export default function VisualHighlightsPage() {
                         onClick={() => handleShare(current.id)}
                         className="flex flex-col items-center gap-1"
                       >
-                        <span className="flex h-11 w-11 items-center justify-center rounded-full bg-black/60 hover:bg-[#398BFF] transition-colors">
+                        <span className="flex h-11 w-11 items-center justify-center rounded-full bg-black/60 hover:bg-[#315CFF] transition-colors">
                           <Share2 className="h-5 w-5" />
                         </span>
                         <span className="text-[11px] font-bold">
@@ -425,14 +444,14 @@ export default function VisualHighlightsPage() {
                     </div>
 
                     <div className="absolute bottom-4 left-4 right-16">
-                      <span className="inline-block rounded-full bg-[#398BFF] px-2.5 py-0.5 text-[10px] font-extrabold uppercase text-white">
+                      <span className="inline-block rounded-full bg-[#315CFF] px-2.5 py-0.5 text-[10px] font-extrabold uppercase text-white">
                         {CATEGORY_META[current.category].label}
                       </span>
                       <Link
                         href={`/article/${current.id}`}
                         className="block group"
                       >
-                        <h3 className="mt-2 font-editorial text-xl leading-snug text-white group-hover:text-[#EAF2EE]">
+                        <h3 className="mt-2 font-editorial text-xl leading-snug text-white group-hover:text-[#EEF2FF]">
                           {current.headline}
                         </h3>
                       </Link>
@@ -445,7 +464,7 @@ export default function VisualHighlightsPage() {
 
                 <div className="lg:col-span-6 space-y-4">
                   <div className="flex items-center justify-between">
-                    <p className="text-xs font-bold uppercase tracking-wider text-[#EAF2EE]">
+                    <p className="text-xs font-bold uppercase tracking-wider text-[#EEF2FF]">
                       Queue ({activeIdx + 1} / {visibleMoments.length})
                     </p>
                     <div className="flex gap-2">
@@ -454,7 +473,7 @@ export default function VisualHighlightsPage() {
                         aria-label="Previous highlight"
                         disabled={activeIdx === 0}
                         onClick={() => setActiveIdx((i) => Math.max(0, i - 1))}
-                        className="flex h-9 w-9 items-center justify-center rounded-full border border-white/20 bg-white/10 hover:bg-[#398BFF] disabled:opacity-40 transition-colors"
+                        className="flex h-9 w-9 items-center justify-center rounded-full border border-white/20 bg-white/10 hover:bg-[#315CFF] disabled:opacity-40 transition-colors"
                       >
                         <ChevronUp className="h-4 w-4" />
                       </button>
@@ -467,7 +486,7 @@ export default function VisualHighlightsPage() {
                             Math.min(visibleMoments.length - 1, i + 1)
                           )
                         }
-                        className="flex h-9 w-9 items-center justify-center rounded-full border border-white/20 bg-white/10 hover:bg-[#398BFF] disabled:opacity-40 transition-colors"
+                        className="flex h-9 w-9 items-center justify-center rounded-full border border-white/20 bg-white/10 hover:bg-[#315CFF] disabled:opacity-40 transition-colors"
                       >
                         <ChevronDown className="h-4 w-4" />
                       </button>
@@ -483,15 +502,22 @@ export default function VisualHighlightsPage() {
                         className={cn(
                           "flex w-full items-center gap-3 rounded-2xl border p-3 text-left transition-all",
                           idx === activeIdx
-                            ? "border-[#398BFF] bg-white text-[#181917] electric-glow"
+                            ? "border-[#315CFF] bg-white text-[#111318] electric-glow"
                             : "border-white/15 bg-white/10 text-white hover:bg-white/15"
                         )}
                       >
-                        <img
+                        <Image
                           src={
                             m.media[0]?.url ?? "/images/photos/pethri-town.jpg"
                           }
                           alt={m.headline}
+                          width={56}
+                          height={56}
+                          unoptimized={
+                            !isLocalImageSrc(
+                              m.media[0]?.url ?? "/images/photos/pethri-town.jpg"
+                            )
+                          }
                           className="h-14 w-14 rounded-xl object-cover shrink-0"
                         />
                         <div className="min-w-0 flex-1">
@@ -499,8 +525,8 @@ export default function VisualHighlightsPage() {
                             className={cn(
                               "text-[11px] font-bold",
                               idx === activeIdx
-                                ? "text-[#398BFF]"
-                                : "text-[#EAF2EE]"
+                                ? "text-[#315CFF]"
+                                : "text-[#EEF2FF]"
                             )}
                           >
                             {m.localityName} • {CATEGORY_META[m.category].short}
@@ -512,8 +538,8 @@ export default function VisualHighlightsPage() {
                             className={cn(
                               "mt-0.5 text-[11px]",
                               idx === activeIdx
-                                ? "text-[#5A605C]"
-                                : "text-[#EAF2EE]/80"
+                                ? "text-[#5B6472]"
+                                : "text-[#EEF2FF]/80"
                             )}
                           >
                             by {m.author.fullName}

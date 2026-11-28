@@ -1,24 +1,35 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 
+function getServerSupabaseEnv() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
+  const key = (
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+  )?.trim();
+  return { url, key };
+}
+
 export function isServerSupabaseConfigured(): boolean {
+  const { url, key } = getServerSupabaseEnv();
   return Boolean(
-    process.env.NEXT_PUBLIC_SUPABASE_URL &&
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    url &&
+      key &&
+      !url.includes("your-project-ref") &&
+      !key.includes("your-supabase-anon-key")
   );
 }
 
 export async function createSupabaseServerClient() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const { url, key } = getServerSupabaseEnv();
 
-  if (!url || !anonKey) {
+  if (!isServerSupabaseConfigured() || !url || !key) {
     return null;
   }
 
   const cookieStore = await cookies();
 
-  return createServerClient(url, anonKey, {
+  return createServerClient(url, key, {
     cookies: {
       getAll() {
         return cookieStore.getAll();
@@ -29,7 +40,7 @@ export async function createSupabaseServerClient() {
             cookieStore.set(name, value, options)
           );
         } catch {
-          // Called from a Server Component; middleware or route handler handles writes.
+          // Called from a Server Component; proxy.ts handles session cookie refreshes.
         }
       },
     },

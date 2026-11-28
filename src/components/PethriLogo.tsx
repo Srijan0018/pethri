@@ -1,4 +1,5 @@
-import React from "react";
+import React, { useId } from "react";
+import Image from "next/image";
 import { cn } from "@/lib/utils";
 
 interface PethriLogoProps {
@@ -12,17 +13,23 @@ export function PethriLogo({
   size = "md",
   className,
 }: PethriLogoProps) {
+  const uid = useId().replace(/:/g, "");
+  const ribbonId = `pethri-ribbon-${uid}`;
+  const waveId = `pethri-wave-${uid}`;
+
   if (variant === "image") {
     return (
       <div
         className={cn(
-          "inline-flex items-center overflow-hidden rounded-xl bg-white p-1 border border-[#E5E3DC]",
+          "inline-flex items-center overflow-hidden rounded-xl bg-white p-1 border border-[#E2E7F0]",
           className
         )}
       >
-        <img
+        <Image
           src="/images/pethri-logo.jpg"
           alt="Pethri.com official logo"
+          width={280}
+          height={84}
           className={cn(
             "object-contain",
             size === "sm" && "h-8 w-auto",
@@ -34,77 +41,119 @@ export function PethriLogo({
     );
   }
 
-  const iconSize = size === "sm" ? 28 : size === "lg" ? 38 : 32;
+  const iconSize = size === "sm" ? 32 : size === "lg" ? 46 : 38;
   const textSize =
     size === "sm"
-      ? "text-lg"
+      ? "text-xl"
       : size === "lg"
-        ? "text-2xl sm:text-3xl"
-        : "text-xl";
+        ? "text-3xl sm:text-4xl"
+        : "text-2xl";
+
+  const isDark = variant === "dark";
 
   return (
-    <div className={cn("inline-flex items-center gap-2.5 select-none", className)}>
-      <div
-        className={cn(
-          "relative flex items-center justify-center rounded-xl p-1.5 border",
-          variant === "dark"
-            ? "bg-white/10 border-white/15"
-            : "bg-[#EAF2EE] border-[#E5E3DC]"
-        )}
+    <div
+      className={cn(
+        "group inline-flex items-center gap-3 select-none",
+        className
+      )}
+    >
+      {/* Bespoke Coastal Beacon + Architectural 'P' Emblem (no boxy frame) */}
+      <svg
+        width={iconSize}
+        height={iconSize}
+        viewBox="0 0 64 64"
+        fill="none"
+        aria-hidden="true"
+        className="shrink-0 drop-shadow-[0_4px_12px_rgba(11,17,32,0.28)] transition-transform duration-300 group-hover:scale-105"
       >
-        <svg
-          width={iconSize}
-          height={iconSize}
-          viewBox="0 0 64 64"
-          fill="none"
-          aria-hidden="true"
-        >
-          <circle
-            cx="32"
-            cy="32"
-            r="27"
-            stroke={variant === "dark" ? "#EAF2EE" : "#1B5E43"}
-            strokeWidth="2"
-            strokeDasharray="5 4"
-            opacity="0.45"
-          />
-          <path
-            d="M15 23C15 19.6863 17.6863 17 21 17H43C46.3137 17 49 19.6863 49 23V37C49 40.3137 46.3137 43 43 43H28L18 50V43H21C17.6863 43 15 40.3137 15 37V23Z"
-            fill="#FFFFFF"
-            stroke="#1B5E43"
-            strokeWidth="3.2"
-          />
-          <rect x="20" y="24" width="11" height="11" rx="2" fill="#1B5E43" />
-          <path d="M21 33L24.5 29L27 31.5L29 29.5L31 33H21Z" fill="#EAF2EE" />
-          <line x1="34" y1="25" x2="44" y2="25" stroke="#181917" strokeWidth="2.5" strokeLinecap="round" />
-          <line x1="34" y1="30" x2="44" y2="30" stroke="#181917" strokeWidth="2.5" strokeLinecap="round" />
-          <line x1="34" y1="35" x2="41" y2="35" stroke="#181917" strokeWidth="2.5" strokeLinecap="round" />
-          {/* Selective Electric Blue Locator Signal */}
-          <path
-            d="M32 5C27.5817 5 24 8.58172 24 13C24 18.5 32 26 32 26C32 26 40 18.5 40 13C40 8.58172 36.4183 5 32 5Z"
-            fill="#1B5E43"
-          />
-          <circle cx="32" cy="13" r="3.8" fill="#398BFF" />
-        </svg>
-      </div>
-      <div
-        className={cn(
-          "font-display font-extrabold tracking-tight leading-none flex items-baseline",
-          textSize
-        )}
-      >
-        <span className={variant === "dark" ? "text-white" : "text-[#181917]"}>
-          pethri
-        </span>
-        <span
+        <defs>
+          <linearGradient id={ribbonId} x1="12" y1="8" x2="54" y2="56" gradientUnits="userSpaceOnUse">
+            <stop offset="0%" stopColor={isDark ? "#FFFFFF" : "#173FBE"} />
+            <stop offset="100%" stopColor={isDark ? "#93B4FF" : "#315CFF"} />
+          </linearGradient>
+          <linearGradient id={waveId} x1="8" y1="48" x2="56" y2="54" gradientUnits="userSpaceOnUse">
+            <stop offset="0%" stopColor="#C5A572" />
+            <stop offset="100%" stopColor="#315CFF" />
+          </linearGradient>
+        </defs>
+
+        {/* Outer Signal Arcs (Top-Right) */}
+        <path
+          d="M44 12C49.5 15.5 53 21.5 53 28"
+          stroke="#C5A572"
+          strokeWidth="2.6"
+          strokeLinecap="round"
+          opacity="0.85"
+        />
+        <path
+          d="M49 7C56.2 11.8 60 19.5 60 28"
+          stroke={isDark ? "#FFFFFF" : "#315CFF"}
+          strokeWidth="2"
+          strokeLinecap="round"
+          opacity="0.45"
+        />
+
+        {/* Architectural 'P' Pillar & Bowl */}
+        <path
+          d="M17 48V15C17 12.7909 18.7909 11 21 11H34C42.2843 11 48 16.2 48 23.5C48 30.8 42.2843 36 34 36H25"
+          stroke={`url(#${ribbonId})`}
+          strokeWidth="6.2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+
+        {/* Lighthouse Beacon Core inside the 'P' */}
+        <circle
+          cx="33"
+          cy="23.5"
+          r="4.2"
+          fill="#C5A572"
+        />
+        <circle
+          cx="33"
+          cy="23.5"
+          r="1.8"
+          fill={isDark ? "#111318" : "#FFFFFF"}
+        />
+
+        {/* Karavali Coastal Horizon Wave */}
+        <path
+          d="M10 52C17.5 47.5 25.5 55.5 34 51.5C41.5 48 48 52.5 55 49.5"
+          stroke={`url(#${waveId})`}
+          strokeWidth="3.2"
+          strokeLinecap="round"
+        />
+      </svg>
+
+      {/* Editorial Wordmark + Micro Karavali Tag */}
+      <div className="flex flex-col leading-none">
+        <div
           className={cn(
-            "ml-1 px-1.5 py-0.5 rounded-md text-[0.7em] font-mono font-bold tracking-tight",
-            variant === "dark"
-              ? "bg-[#398BFF] text-white"
-              : "bg-[#1B5E43] text-white"
+            "font-display font-extrabold tracking-tight flex items-baseline",
+            textSize
           )}
         >
-          .com
+          <span
+            className={cn(
+              isDark
+                ? "text-white drop-shadow-[0_2px_10px_rgba(11,17,32,0.55)]"
+                : "text-[#111318]"
+            )}
+          >
+            pethri
+          </span>
+          <span className="text-[#C5A572] font-editorial italic font-normal ml-0.5">
+            .com
+          </span>
+        </div>
+        <span
+          className={cn(
+            "mt-0.5 font-mono text-[8px] font-bold uppercase tracking-[0.32em]",
+            isDark ? "text-white/75" : "text-[#173FBE]/80"
+          )}
+        >
+          KARAVALI
         </span>
       </div>
     </div>

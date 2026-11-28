@@ -62,13 +62,13 @@ export function LocalityMap({
   };
 
   return (
-    <div className="overflow-hidden rounded-3xl border border-[#E5E3DC] bg-[#1B5E43] text-white shadow-sm">
+    <div className="overflow-hidden rounded-3xl border border-[#E2E7F0] bg-[#173FBE] text-white shadow-sm">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/15 px-5 py-3.5">
         <div>
-          <p className="font-mono text-[11px] font-bold uppercase tracking-widest text-[#EAF2EE]">
+          <p className="font-mono text-[11px] font-bold uppercase tracking-widest text-[#EEF2FF]">
             Interactive Karavali Belt Map
           </p>
-          <p className="text-[11px] text-[#EAF2EE]/80">
+          <p className="text-[11px] text-[#EEF2FF]/80">
             Tap Mangaluru, Udupi, Manipal, Kundapura, or Pethri to filter local
             stories.
           </p>
@@ -77,7 +77,7 @@ export function LocalityMap({
           type="button"
           onClick={handleUseMyLocation}
           disabled={locating}
-          className="inline-flex items-center gap-1.5 rounded-full bg-white px-3.5 py-1.5 text-xs font-extrabold text-[#1B5E43] hover:bg-[#398BFF] hover:text-white transition-colors disabled:opacity-60"
+          className="inline-flex items-center gap-1.5 rounded-full bg-white px-3.5 py-1.5 text-xs font-extrabold text-[#173FBE] hover:bg-[#315CFF] hover:text-white transition-colors disabled:opacity-60"
         >
           <LocateFixed className="h-3.5 w-3.5" />
           <span>{locating ? "Locating..." : "Find Nearest Locality"}</span>
@@ -85,13 +85,13 @@ export function LocalityMap({
       </div>
 
       {gpsStatus && (
-        <div className="flex items-center gap-2 bg-[#EAF2EE] px-5 py-2 text-[11px] font-semibold text-[#181917]">
-          <Shield className="h-3.5 w-3.5 shrink-0 text-[#1B5E43]" />
+        <div className="flex items-center gap-2 bg-[#EEF2FF] px-5 py-2 text-[11px] font-semibold text-[#111318]">
+          <Shield className="h-3.5 w-3.5 shrink-0 text-[#173FBE]" />
           <span>{gpsStatus}</span>
         </div>
       )}
 
-      <div className="relative h-[400px] sm:h-[460px] w-full overflow-hidden bg-[#1B5E43] bg-forest-grid">
+      <div className="relative h-[400px] sm:h-[460px] w-full overflow-hidden bg-[#173FBE] bg-primary-grid">
         <svg
           viewBox="0 0 1000 500"
           preserveAspectRatio="none"
@@ -101,13 +101,13 @@ export function LocalityMap({
           {/* Arabian Sea Coastline Silhouette */}
           <path
             d="M0 0 L175 0 Q140 130 165 250 T210 500 L0 500 Z"
-            fill="#EAF2EE"
+            fill="#EEF2FF"
             opacity="0.14"
           />
           {/* Coastal NH-66 Highway Line */}
           <path
             d="M240 80 L280 150 L380 310 L620 420"
-            stroke="#398BFF"
+            stroke="#315CFF"
             strokeWidth="3"
             strokeDasharray="8 6"
             fill="none"
@@ -116,7 +116,7 @@ export function LocalityMap({
           {/* Interior Pethri–Brahmavar–Manipal Link */}
           <path
             d="M320 230 L540 210 L680 290 L380 310"
-            stroke="#EAF2EE"
+            stroke="#EEF2FF"
             strokeWidth="2"
             strokeDasharray="5 5"
             fill="none"
@@ -124,9 +124,9 @@ export function LocalityMap({
           />
         </svg>
 
-        <div className="absolute left-4 top-4 rounded-full border border-white/20 bg-[#181917]/55 px-3 py-1 backdrop-blur-md text-[10px] font-mono text-[#EAF2EE]">
+        <div className="absolute left-4 top-4 rounded-full border border-white/20 bg-[#111318]/55 px-3 py-1 backdrop-blur-md text-[10px] font-mono text-[#EEF2FF]">
           <div className="flex items-center gap-1.5">
-            <Navigation className="h-3 w-3 text-[#398BFF]" />
+            <Navigation className="h-3 w-3 text-[#315CFF]" />
             <span>KARAVALI COAST • 12.91°N – 13.62°N</span>
           </div>
         </div>
@@ -148,7 +148,7 @@ export function LocalityMap({
                 <span
                   className={cn(
                     "absolute inset-0 -m-2 rounded-full animate-ping opacity-40",
-                    hasBreaking ? "bg-[#D94E34]" : "bg-[#398BFF]"
+                    hasBreaking ? "bg-[#D94E34]" : "bg-[#315CFF]"
                   )}
                 />
               )}
@@ -156,10 +156,10 @@ export function LocalityMap({
                 className={cn(
                   "relative flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-extrabold shadow-lg transition-all group-hover:scale-105",
                   isSelected
-                    ? "bg-[#398BFF] text-white ring-4 ring-white/30 scale-110"
+                    ? "bg-[#315CFF] text-white ring-4 ring-white/30 scale-110"
                     : loc.isPrimary
-                      ? "bg-[#EAF2EE] text-[#181917]"
-                      : "bg-white text-[#181917] hover:bg-[#398BFF] hover:text-white"
+                      ? "bg-[#EEF2FF] text-[#111318]"
+                      : "bg-white text-[#111318] hover:bg-[#315CFF] hover:text-white"
                 )}
               >
                 <MapPin className="h-3.5 w-3.5 shrink-0" />
@@ -169,7 +169,7 @@ export function LocalityMap({
                     "rounded-full px-1.5 py-0.5 text-[10px]",
                     isSelected
                       ? "bg-white/20 text-white"
-                      : "bg-[#EAF2EE] text-[#1B5E43]"
+                      : "bg-[#EEF2FF] text-[#173FBE]"
                   )}
                 >
                   {locPosts.length}
@@ -192,7 +192,7 @@ export function LocalityMap({
                   top: `${Math.min(88, loc.mapY + 6)}%`,
                 }}
                 title={`Consented GPS Report: ${p.headline}`}
-                className="absolute -translate-x-1/2 -translate-y-1/2 rounded-full bg-white px-2.5 py-0.5 text-[9px] font-extrabold text-[#1B5E43] shadow-md border border-[#E5E3DC]"
+                className="absolute -translate-x-1/2 -translate-y-1/2 rounded-full bg-white px-2.5 py-0.5 text-[9px] font-extrabold text-[#173FBE] shadow-md border border-[#E2E7F0]"
               >
                 GPS • {CATEGORY_META[p.category].short}
               </div>
@@ -200,15 +200,15 @@ export function LocalityMap({
           })}
       </div>
 
-      <div className="flex items-center gap-2 overflow-x-auto no-scrollbar bg-[#181917] px-4 py-3">
+      <div className="flex items-center gap-2 overflow-x-auto no-scrollbar bg-[#111318] px-4 py-3">
         <button
           type="button"
           onClick={() => onSelectLocality("all")}
           className={cn(
             "shrink-0 rounded-full px-3.5 py-1 text-xs font-bold transition-colors",
             selectedLocalityId === "all"
-              ? "bg-[#398BFF] text-white"
-              : "bg-white/10 text-[#EAF2EE] hover:bg-white/20"
+              ? "bg-[#315CFF] text-white"
+              : "bg-white/10 text-[#EEF2FF] hover:bg-white/20"
           )}
         >
           All Karavali ({posts.length})
@@ -223,8 +223,8 @@ export function LocalityMap({
               className={cn(
                 "shrink-0 rounded-full px-3.5 py-1 text-xs font-bold transition-colors",
                 selectedLocalityId === loc.id
-                  ? "bg-[#398BFF] text-white"
-                  : "bg-white/10 text-[#EAF2EE] hover:bg-white/20"
+                  ? "bg-[#315CFF] text-white"
+                  : "bg-white/10 text-[#EEF2FF] hover:bg-white/20"
               )}
             >
               {loc.name} ({count})

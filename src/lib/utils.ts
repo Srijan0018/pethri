@@ -5,6 +5,10 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+export function isLocalImageSrc(src: string): boolean {
+  return src.startsWith("/") && !src.startsWith("//");
+}
+
 export function formatRelativeTime(
   isoDate: string,
   referenceNowMs?: number | null
@@ -35,49 +39,49 @@ export const CATEGORY_META = {
     label: "Local News",
     labelKn: "ಸ್ಥಳೀಯ ಸುದ್ದಿ",
     short: "News",
-    accent: "bg-[#1B5E43] text-white",
-    pill: "bg-[#EAF2EE] text-[#1B5E43] border-[#E5E3DC]",
+    accent: "bg-[#173FBE] text-white",
+    pill: "bg-[#EEF2FF] text-[#173FBE] border-[#E2E7F0]",
   },
   church: {
-    label: "Church & Faith",
-    labelKn: "ಚರ್ಚ್ ಮತ್ತು ಧಾರ್ಮಿಕ",
-    short: "Faith",
-    accent: "bg-[#181917] text-white",
-    pill: "bg-[#EAF2EE] text-[#181917] border-[#E5E3DC]",
+    label: "Religion & Culture",
+    labelKn: "ಧರ್ಮ ಮತ್ತು ಸಂಸ್ಕೃತಿ",
+    short: "Religion",
+    accent: "bg-[#111318] text-white",
+    pill: "bg-[#EEF2FF] text-[#111318] border-[#E2E7F0]",
   },
   weddings: {
     label: "Weddings",
     labelKn: "ಮದುವೆ ಸಂಭ್ರಮ",
     short: "Weddings",
-    accent: "bg-[#1B5E43] text-white",
-    pill: "bg-white text-[#181917] border-[#E5E3DC]",
+    accent: "bg-[#173FBE] text-white",
+    pill: "bg-white text-[#111318] border-[#E2E7F0]",
   },
   agriculture: {
     label: "Agriculture",
     labelKn: "ಕೃಷಿ ಮತ್ತು ಬೆಳೆ",
     short: "Farming",
-    accent: "bg-[#1B5E43] text-white",
-    pill: "bg-[#EAF2EE] text-[#1B5E43] border-[#E5E3DC]",
+    accent: "bg-[#173FBE] text-white",
+    pill: "bg-[#EEF2FF] text-[#173FBE] border-[#E2E7F0]",
   },
   sports: {
     label: "Sports & Kabaddi",
     labelKn: "ಕ್ರೀಡೆ ಮತ್ತು ಕಬಡ್ಡಿ",
     short: "Sports",
-    accent: "bg-[#1B5E43] text-white",
-    pill: "bg-[#EAF2EE] text-[#181917] border-[#E5E3DC]",
+    accent: "bg-[#173FBE] text-white",
+    pill: "bg-[#EEF2FF] text-[#111318] border-[#E2E7F0]",
   },
   civic: {
     label: "Public Issues",
     labelKn: "ಸಾರ್ವಜನಿಕ ಸಮಸ್ಯೆ",
     short: "Civic",
-    accent: "bg-[#181917] text-white",
-    pill: "bg-[#F8F7F4] text-[#181917] border-[#E5E3DC]",
+    accent: "bg-[#111318] text-white",
+    pill: "bg-[#FFFFFF] text-[#111318] border-[#E2E7F0]",
   },
   celebrations: {
     label: "Celebrations",
     labelKn: "ಉತ್ಸವ ಮತ್ತು ಹಬ್ಬ",
     short: "Events",
-    accent: "bg-[#1B5E43] text-white",
-    pill: "bg-[#EAF2EE] text-[#1B5E43] border-[#E5E3DC]",
+    accent: "bg-[#173FBE] text-white",
+    pill: "bg-[#EEF2FF] text-[#173FBE] border-[#E2E7F0]",
   },
 } as const;

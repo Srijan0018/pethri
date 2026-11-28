@@ -1,27 +1,41 @@
 import { NextRequest, NextResponse } from "next/server";
-import { listPosts } from "@/lib/store";
+import { resolveRequestActor } from "@/lib/server-auth";
+import { getPostsRepository } from "@/lib/repositories/posts";
 
 export async function GET(
   req: NextRequest,
   context: { params: Promise<{ id: string }> }
 ) {
-  const { id } = await context.params;
-  const viewerId = req.headers.get("x-pethri-actor-id") ?? undefined;
-  const { posts } = await listPosts({ includePending: Boolean(viewerId), viewerId });
-  const post = posts.find((p) => p.id === id);
+  try {
+    const { id } = await context.params;
+    const actor = await resolveRequestActor(req);
 
-  if (!post) {
-    return NextResponse.json({ error: "Article not found" }, { status: 404 });
+    const { posts } = await getPostsRepository({
+      postId: id,
+      includePending: Boolean(actor),
+      viewerId: actor?.profile.id,
+      limit: 1,
+    });
+    const post = posts[0];
+
+    if (!post) {
+      return NextResponse.json({ error: "Article not found" }, { status: 404 });
+    }
+
+    const related = posts
+      .filter(
+        (p) =>
+          p.id !== post.id &&
+          p.moderationStatus === "approved" &&
+          (p.localityId === post.localityId || p.category === post.category)
+      )
+      .slice(0, 3);
+
+    return NextResponse.json({ post, related });
+  } catch (err: any) {
+    return NextResponse.json(
+      { error: err?.message || "Failed to load article." },
+      { status: 503 }
+    );
   }
-
-  const related = posts
-    .filter(
-      (p) =>
-        p.id !== post.id &&
-        p.moderationStatus === "approved" &&
-        (p.localityId === post.localityId || p.category === post.category)
-    )
-    .slice(0, 3);
-
-  return NextResponse.json({ post, related });
 }

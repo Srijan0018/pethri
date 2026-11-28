@@ -8,12 +8,9 @@ import {
   Flame,
   MapPin,
   Megaphone,
-  Radio,
   Search,
-  Sparkles,
   Store,
 } from "lucide-react";
-import { MomentLightbox } from "@/components/MomentLightbox";
 import { EditorialReveal } from "@/components/MotionPrimitives";
 import { PostCard } from "@/components/PostCard";
 import { usePethri } from "@/components/PethriProvider";
@@ -40,6 +37,7 @@ function FeedContent() {
     localities,
     activeLocalityId,
     setActiveLocalityId,
+    isAuthenticated,
     requireAuth,
     language,
     dict,
@@ -47,6 +45,9 @@ function FeedContent() {
   } = usePethri();
   const [posts, setPosts] = useState<PostItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [totalPosts, setTotalPosts] = useState(0);
+  const [offset, setOffset] = useState(0);
   const [category, setCategory] = useState<PostCategory | "all">(
     initialCategory
   );
@@ -57,10 +58,9 @@ function FeedContent() {
     "all"
   );
   const [search, setSearch] = useState("");
-  const [momentIndex, setMomentIndex] = useState<number | null>(null);
   const [followedLocalities, setFollowedLocalities] = useState<
     Record<string, boolean>
-  >({ "loc-pethri": true, "loc-mangaluru": true, "loc-udupi": true });
+  >({});
 
   useEffect(() => {
     setSourceKind(initialSourceKind);
@@ -72,8 +72,42 @@ function FeedContent() {
     }
   }, [initialLocality, setActiveLocalityId]);
 
+  useEffect(() => {
+    setOffset(0);
+  }, [activeLocalityId, category, sourceKind, verification, search]);
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setFollowedLocalities({});
+      return;
+    }
+    let active = true;
+    fetch("/api/preferences")
+      .then(async (response) => {
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error ?? "Unable to load follows.");
+        if (active && Array.isArray(data.followedLocalities)) {
+          setFollowedLocalities(
+            Object.fromEntries(data.followedLocalities.map((id: string) => [id, true]))
+          );
+        }
+      })
+      .catch((error: unknown) => {
+        if (active) {
+          showToast(
+            error instanceof Error ? error.message : "Unable to load follows.",
+            "error"
+          );
+        }
+      });
+    return () => {
+      active = false;
+    };
+  }, [isAuthenticated, showToast]);
+
   const fetchFeed = useCallback(async () => {
     setLoading(true);
+    setLoadError(null);
     try {
       const params = new URLSearchParams();
       if (activeLocalityId !== "all") params.set("locality", activeLocalityId);
@@ -81,22 +115,28 @@ function FeedContent() {
       if (sourceKind !== "all") params.set("sourceKind", sourceKind);
       if (verification !== "all") params.set("verification", verification);
       if (search.trim()) params.set("search", search.trim());
+      params.set("limit", "20");
+      params.set("offset", String(offset));
 
       const res = await fetch(`/api/posts?${params.toString()}`);
-      if (res.ok) {
-        const data = await res.json();
-        setPosts(data.posts ?? []);
-      }
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Unable to load news.");
+      setPosts(data.posts ?? []);
+      setTotalPosts(data.total ?? 0);
+    } catch (error) {
+      setPosts([]);
+      setTotalPosts(0);
+      setLoadError(
+        error instanceof Error ? error.message : "Unable to load news."
+      );
     } finally {
       setLoading(false);
     }
-  }, [activeLocalityId, category, sourceKind, verification, search]);
+  }, [activeLocalityId, category, sourceKind, verification, search, offset]);
 
   useEffect(() => {
     fetchFeed();
   }, [fetchFeed]);
-
-  const highlights = useMemo(() => posts.filter((p) => p.isMoment), [posts]);
 
   const handlePostUpdated = (updated: PostItem) => {
     setPosts((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
@@ -114,16 +154,14 @@ function FeedContent() {
     });
     if (res.ok) {
       const data = await res.json();
-      setFollowedLocalities((prev) => ({
-        ...prev,
-        [locId]: Boolean(data.locality?.followedByMe),
-      }));
+      setFollowedLocalities((prev) => ({ ...prev, [locId]: Boolean(data.following) }));
       showToast(
-        data.locality?.followedByMe
-          ? `Following ${data.locality.name} updates`
-          : `Unfollowed ${data.locality.name}`,
+        data.following ? "Following locality updates" : "Unfollowed locality",
         "info"
       );
+    } else {
+      const data = await res.json();
+      showToast(data.error ?? "Unable to update locality follow.", "error");
     }
   };
 
@@ -132,8 +170,8 @@ function FeedContent() {
       <div className="grid gap-6 lg:grid-cols-12 items-start">
         {/* LEFT RAIL */}
         <aside className="hidden lg:block lg:col-span-3 sticky top-20 space-y-4">
-          <div className="rounded-2xl border border-[#E5E3DC] bg-white p-4">
-            <p className="font-mono text-[10px] font-bold uppercase tracking-widest text-[#1B5E43]">
+          <div className="rounded-2xl border border-[#E2E7F0] bg-white p-4">
+            <p className="font-mono text-[10px] font-bold uppercase tracking-widest text-[#173FBE]">
               Editorial Desk Filter
             </p>
             <div className="mt-2.5 space-y-1">
@@ -152,21 +190,21 @@ function FeedContent() {
                   className={cn(
                     "flex w-full items-center justify-between rounded-xl px-3 py-2 text-xs font-bold transition-colors",
                     sourceKind === src.id
-                      ? "bg-[#1B5E43] text-white"
-                      : "text-[#181917] hover:bg-[#EAF2EE]"
+                      ? "bg-[#173FBE] text-white"
+                      : "text-[#111318] hover:bg-[#EEF2FF]"
                   )}
                 >
                   <span>{src.label}</span>
                   {sourceKind === src.id && (
-                    <span className="h-2 w-2 rounded-full bg-[#398BFF]" />
+                    <span className="h-2 w-2 rounded-full bg-[#315CFF]" />
                   )}
                 </button>
               ))}
             </div>
           </div>
 
-          <div className="rounded-2xl border border-[#E5E3DC] bg-white p-4">
-            <p className="font-mono text-[10px] font-bold uppercase tracking-widest text-[#1B5E43]">
+          <div className="rounded-2xl border border-[#E2E7F0] bg-white p-4">
+            <p className="font-mono text-[10px] font-bold uppercase tracking-widest text-[#173FBE]">
               Filter by Beat
             </p>
             <div className="mt-2.5 space-y-1">
@@ -176,8 +214,8 @@ function FeedContent() {
                 className={cn(
                   "flex w-full items-center justify-between rounded-xl px-3 py-2 text-xs font-bold transition-colors",
                   category === "all"
-                    ? "bg-[#1B5E43] text-white"
-                    : "text-[#181917] hover:bg-[#EAF2EE]"
+                    ? "bg-[#173FBE] text-white"
+                    : "text-[#111318] hover:bg-[#EEF2FF]"
                 )}
               >
                 <span>All Beats</span>
@@ -190,8 +228,8 @@ function FeedContent() {
                   className={cn(
                     "flex w-full items-center justify-between rounded-xl px-3 py-2 text-xs font-semibold transition-colors",
                     category === cat
-                      ? "bg-[#EAF2EE] text-[#1B5E43] font-bold"
-                      : "text-[#5A605C] hover:bg-[#F8F7F4] hover:text-[#181917]"
+                      ? "bg-[#EEF2FF] text-[#173FBE] font-bold"
+                      : "text-[#5B6472] hover:bg-[#FFFFFF] hover:text-[#111318]"
                   )}
                 >
                   <span>
@@ -204,8 +242,8 @@ function FeedContent() {
             </div>
           </div>
 
-          <div className="rounded-2xl border border-[#E5E3DC] bg-white p-4">
-            <p className="font-mono text-[10px] font-bold uppercase tracking-widest text-[#1B5E43]">
+          <div className="rounded-2xl border border-[#E2E7F0] bg-white p-4">
+            <p className="font-mono text-[10px] font-bold uppercase tracking-widest text-[#173FBE]">
               Verification Tier
             </p>
             <div className="mt-2.5 flex flex-wrap gap-1.5">
@@ -218,8 +256,8 @@ function FeedContent() {
                     className={cn(
                       "rounded-full px-3 py-1 text-[11px] font-bold capitalize border transition-colors",
                       verification === tier
-                        ? "bg-[#398BFF] border-[#398BFF] text-white"
-                        : "bg-[#F8F7F4] border-[#E5E3DC] text-[#181917] hover:border-[#398BFF]"
+                        ? "bg-[#315CFF] border-[#315CFF] text-white"
+                        : "bg-[#FFFFFF] border-[#E2E7F0] text-[#111318] hover:border-[#315CFF]"
                     )}
                   >
                     {tier === "all" ? "All Tiers" : tier}
@@ -232,52 +270,15 @@ function FeedContent() {
 
         {/* CENTER STREAM */}
         <section className="lg:col-span-6 space-y-4">
-          <div className="rounded-2xl border border-[#E5E3DC] bg-white p-4">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-1.5 text-xs font-extrabold text-[#181917]">
-                <Sparkles className="h-4 w-4 text-[#1B5E43]" />
-                <span>Verified Visual Highlights</span>
-              </div>
-              <Link
-                href="/live"
-                className="inline-flex items-center gap-1 text-[11px] font-extrabold text-white bg-[#D94E34] px-2.5 py-0.5 rounded-full"
-              >
-                <Radio className="h-3 w-3" />
-                Official Live
-              </Link>
-            </div>
-            <div className="flex gap-3.5 overflow-x-auto no-scrollbar pb-1">
-              {highlights.map((m, idx) => (
-                <button
-                  key={m.id}
-                  type="button"
-                  onClick={() => setMomentIndex(idx)}
-                  className="flex flex-col items-center gap-1.5 shrink-0 max-w-16 group"
-                >
-                  <div className="rounded-full p-0.5 bg-[#EAF2EE] ring-2 ring-[#398BFF]/60 group-hover:ring-[#398BFF] transition-all">
-                    <img
-                      src={m.media[0]?.url ?? m.author.avatarUrl}
-                      alt={m.localityName}
-                      className="h-13 w-13 rounded-full border-2 border-white object-cover"
-                    />
-                  </div>
-                  <span className="text-[11px] font-semibold text-[#181917] truncate w-full text-center">
-                    {m.localityName}
-                  </span>
-                </button>
-              ))}
-            </div>
-          </div>
-
           <div className="space-y-2.5">
-            <div className="flex items-center gap-2 rounded-full border border-[#E5E3DC] bg-white px-4 py-2.5 focus-within:border-[#398BFF] focus-within:ring-2 focus-within:ring-[#398BFF]/15 transition-all">
-              <Search className="h-4 w-4 text-[#5A605C]" />
+            <div className="flex items-center gap-2 rounded-full border border-[#E2E7F0] bg-white px-4 py-2.5 focus-within:border-[#315CFF] focus-within:ring-2 focus-within:ring-[#315CFF]/15 transition-all">
+              <Search className="h-4 w-4 text-[#5B6472]" />
               <input
                 type="search"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder={dict.searchPlaceholder}
-                className="flex-1 bg-transparent text-sm text-[#181917] outline-none"
+                className="flex-1 bg-transparent text-sm text-[#111318] outline-none"
               />
             </div>
 
@@ -297,8 +298,8 @@ function FeedContent() {
                   className={cn(
                     "shrink-0 rounded-full px-3.5 py-1 text-xs font-bold border",
                     sourceKind === src.id
-                      ? "bg-[#1B5E43] border-[#1B5E43] text-white"
-                      : "bg-white border-[#E5E3DC] text-[#181917]"
+                      ? "bg-[#173FBE] border-[#173FBE] text-white"
+                      : "bg-white border-[#E2E7F0] text-[#111318]"
                   )}
                 >
                   {src.label}
@@ -312,18 +313,22 @@ function FeedContent() {
               {[0, 1].map((skeleton) => (
                 <div
                   key={skeleton}
-                  className="h-80 animate-pulse rounded-2xl border border-[#E5E3DC] bg-white p-5"
+                  className="h-80 animate-pulse rounded-2xl border border-[#E2E7F0] bg-white p-5"
                 >
-                  <div className="h-4 w-1/3 rounded bg-[#EAF2EE]" />
-                  <div className="mt-4 h-6 w-3/4 rounded bg-[#EAF2EE]/70" />
-                  <div className="mt-4 h-44 rounded-xl bg-[#F8F7F4]" />
+                  <div className="h-4 w-1/3 rounded bg-[#EEF2FF]" />
+                  <div className="mt-4 h-6 w-3/4 rounded bg-[#EEF2FF]/70" />
+                  <div className="mt-4 h-44 rounded-xl bg-[#FFFFFF]" />
                 </div>
               ))}
             </div>
+          ) : loadError ? (
+            <div role="alert" className="rounded-2xl border border-[#D94E34]/30 bg-white p-5 text-sm text-[#D94E34]">
+              {loadError}
+            </div>
           ) : posts.length === 0 ? (
-            <div className="rounded-2xl border border-[#E5E3DC] bg-white p-10 text-center">
-              <MapPin className="mx-auto h-10 w-10 text-[#5A605C]/40" />
-              <h3 className="mt-3 font-display text-lg font-bold text-[#181917]">
+            <div className="rounded-2xl border border-[#E2E7F0] bg-white p-10 text-center">
+              <MapPin className="mx-auto h-10 w-10 text-[#5B6472]/40" />
+              <h3 className="mt-3 font-display text-lg font-bold text-[#111318]">
                 No published dispatches match these filters
               </h3>
               <div className="mt-4 flex justify-center gap-3">
@@ -336,7 +341,7 @@ function FeedContent() {
                     setVerification("all");
                     setSearch("");
                   }}
-                  className="rounded-full border border-[#E5E3DC] px-4 py-2 text-xs font-bold text-[#1B5E43] hover:border-[#398BFF] hover:text-[#398BFF]"
+                  className="rounded-full border border-[#E2E7F0] px-4 py-2 text-xs font-bold text-[#173FBE] hover:border-[#315CFF] hover:text-[#315CFF]"
                 >
                   Reset Filters
                 </button>
@@ -349,23 +354,40 @@ function FeedContent() {
                   <PostCard
                     post={post}
                     onPostUpdated={handlePostUpdated}
-                    onOpenMoment={(clicked) => {
-                      const i = highlights.findIndex(
-                        (m) => m.id === clicked.id
-                      );
-                      setMomentIndex(i >= 0 ? i : 0);
-                    }}
                   />
                 </EditorialReveal>
               ))}
             </div>
           )}
+          {!loading && !loadError && totalPosts > 20 && (
+            <nav aria-label="News pages" className="flex items-center justify-between rounded-2xl border border-[#E2E7F0] bg-white p-3">
+              <button
+                type="button"
+                disabled={offset === 0}
+                onClick={() => setOffset((current) => Math.max(0, current - 20))}
+                className="rounded-full border border-[#E2E7F0] px-4 py-2 text-xs font-bold text-[#173FBE] disabled:opacity-40"
+              >
+                Newer
+              </button>
+              <span className="text-xs text-[#5B6472]">
+                {offset + 1}–{Math.min(offset + posts.length, totalPosts)} of {totalPosts}
+              </span>
+              <button
+                type="button"
+                disabled={offset + 20 >= totalPosts}
+                onClick={() => setOffset((current) => current + 20)}
+                className="rounded-full border border-[#E2E7F0] px-4 py-2 text-xs font-bold text-[#173FBE] disabled:opacity-40"
+              >
+                Older
+              </button>
+            </nav>
+          )}
         </section>
 
         {/* RIGHT RAIL */}
         <aside className="hidden lg:block lg:col-span-3 sticky top-20 space-y-4">
-          <div className="rounded-2xl border border-[#E5E3DC] bg-white p-4">
-            <div className="flex items-center gap-2 text-xs font-extrabold uppercase tracking-wider text-[#1B5E43]">
+          <div className="rounded-2xl border border-[#E2E7F0] bg-white p-4">
+            <div className="flex items-center gap-2 text-xs font-extrabold uppercase tracking-wider text-[#173FBE]">
               <Flame className="h-4 w-4" />
               <span>Karavali Localities</span>
             </div>
@@ -383,10 +405,10 @@ function FeedContent() {
                       )
                     }
                     className={cn(
-                      "font-semibold text-left hover:text-[#398BFF] transition-colors",
+                      "font-semibold text-left hover:text-[#315CFF] transition-colors",
                       activeLocalityId === loc.id
-                        ? "text-[#398BFF] font-extrabold underline"
-                        : "text-[#5A605C]"
+                        ? "text-[#315CFF] font-extrabold underline"
+                        : "text-[#5B6472]"
                     )}
                   >
                     {language === "kn" && loc.nameKn ? loc.nameKn : loc.name}
@@ -397,8 +419,8 @@ function FeedContent() {
                     className={cn(
                       "rounded-full px-2.5 py-0.5 text-[10px] font-bold transition-colors border",
                       followedLocalities[loc.id]
-                        ? "bg-[#1B5E43] border-[#1B5E43] text-white"
-                        : "bg-[#EAF2EE] border-[#E5E3DC] text-[#1B5E43] hover:border-[#398BFF]"
+                        ? "bg-[#173FBE] border-[#173FBE] text-white"
+                        : "bg-[#EEF2FF] border-[#E2E7F0] text-[#173FBE] hover:border-[#315CFF]"
                     )}
                   >
                     {followedLocalities[loc.id]
@@ -411,25 +433,25 @@ function FeedContent() {
           </div>
 
           {/* Private News Tip Intake Box */}
-          <div className="rounded-2xl border border-[#E5E3DC] bg-[#EAF2EE] p-4 space-y-2">
-            <div className="flex items-center gap-2 text-xs font-extrabold uppercase tracking-wider text-[#1B5E43]">
+          <div className="rounded-2xl border border-[#E2E7F0] bg-[#EEF2FF] p-4 space-y-2">
+            <div className="flex items-center gap-2 text-xs font-extrabold uppercase tracking-wider text-[#173FBE]">
               <FileText className="h-4 w-4" />
               <span>Have a Verified Tip?</span>
             </div>
-            <p className="text-[11px] leading-relaxed text-[#5A605C]">
+            <p className="text-[11px] leading-relaxed text-[#5B6472]">
               News tips and civic reports are reviewed confidentially by our
               newsroom before publication.
             </p>
             <Link
               href="/report"
-              className="inline-block rounded-full bg-[#1B5E43] px-4 py-1.5 text-[11px] font-extrabold text-white hover:bg-[#398BFF] transition-colors"
+              className="inline-block rounded-full bg-[#173FBE] px-4 py-1.5 text-[11px] font-extrabold text-white hover:bg-[#315CFF] transition-colors"
             >
               Submit Private Tip →
             </Link>
           </div>
 
-          <div className="rounded-2xl border border-[#E5E3DC] bg-white p-4">
-            <div className="flex items-center gap-2 text-xs font-extrabold uppercase tracking-wider text-[#1B5E43]">
+          <div className="rounded-2xl border border-[#E2E7F0] bg-white p-4">
+            <div className="flex items-center gap-2 text-xs font-extrabold uppercase tracking-wider text-[#173FBE]">
               <Megaphone className="h-4 w-4" />
               <span>Civic Advisories</span>
             </div>
@@ -438,10 +460,10 @@ function FeedContent() {
                 <div
                   key={ann.id}
                   className={cn(
-                    "rounded-xl border bg-[#F8F7F4] p-3",
+                    "rounded-xl border bg-[#FFFFFF] p-3",
                     ann.urgency === "urgent"
                       ? "border-[#D94E34]/40"
-                      : "border-[#E5E3DC]"
+                      : "border-[#E2E7F0]"
                   )}
                 >
                   <span
@@ -449,12 +471,12 @@ function FeedContent() {
                       "text-[10px] font-bold uppercase",
                       ann.urgency === "urgent"
                         ? "text-[#D94E34]"
-                        : "text-[#5A605C]"
+                        : "text-[#5B6472]"
                     )}
                   >
                     {ann.localityName} • {ann.urgency}
                   </span>
-                  <p className="mt-0.5 text-xs font-bold text-[#181917]">
+                  <p className="mt-0.5 text-xs font-bold text-[#111318]">
                     {ann.title}
                   </p>
                 </div>
@@ -462,18 +484,18 @@ function FeedContent() {
             </div>
           </div>
 
-          <div className="rounded-2xl border border-[#E5E3DC] bg-[#1B5E43] p-4 text-white">
-            <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#EAF2EE]">
+          <div className="rounded-2xl border border-[#E2E7F0] bg-[#173FBE] p-4 text-white">
+            <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#EEF2FF]">
               <Store className="h-4 w-4" />
               <span>Karavali Directory</span>
             </div>
             <p className="mt-2 text-sm font-bold">{DEMO_BUSINESSES[0].name}</p>
-            <p className="mt-1 text-xs text-[#EAF2EE]/85">
+            <p className="mt-1 text-xs text-[#EEF2FF]/85">
               {DEMO_BUSINESSES[0].description}
             </p>
             <Link
               href="/directory"
-              className="mt-3 inline-block text-xs font-bold text-white underline hover:text-[#398BFF]"
+              className="mt-3 inline-block text-xs font-bold text-white underline hover:text-[#315CFF]"
             >
               Events &amp; Businesses →
             </Link>
@@ -481,25 +503,6 @@ function FeedContent() {
         </aside>
       </div>
 
-      {momentIndex !== null && highlights.length > 0 && (
-        <MomentLightbox
-          moments={highlights}
-          initialIndex={momentIndex}
-          onClose={() => setMomentIndex(null)}
-          onLike={async (postId) => {
-            if (!requireAuth("react to highlights")) return;
-            const res = await fetch(`/api/posts/${postId}/engage`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ action: "like" }),
-            });
-            if (res.ok) {
-              const data = await res.json();
-              handlePostUpdated(data.post);
-            }
-          }}
-        />
-      )}
     </div>
   );
 }
@@ -508,7 +511,7 @@ export default function FeedPage() {
   return (
     <Suspense
       fallback={
-        <div className="mx-auto max-w-3xl px-4 py-12 text-center text-sm text-[#5A605C]">
+        <div className="mx-auto max-w-3xl px-4 py-12 text-center text-sm text-[#5B6472]">
           Loading Pethri Karavali feed...
         </div>
       }

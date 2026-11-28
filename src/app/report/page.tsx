@@ -2,7 +2,7 @@
 
 import React, { Suspense, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   Camera,
   CheckCircle2,
@@ -16,19 +16,30 @@ import {
 } from "lucide-react";
 import { usePethri } from "@/components/PethriProvider";
 import { CATEGORY_META, cn } from "@/lib/utils";
-import type { PostCategory, PostItem, PostMediaItem } from "@/types/pethri";
+import { useHydrated } from "@/lib/use-hydrated";
+import type { PostCategory, PostMediaItem } from "@/types/pethri";
 
 function PrivateTipContent() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const initialLocality = searchParams.get("locality");
+  const pageHydrated = useHydrated();
 
   const {
     localities,
     currentUser,
     isAuthenticated,
+    authLoading,
     requireAuth,
     showToast,
+    privacyLocalityOnlyDefault,
   } = usePethri();
+
+  useEffect(() => {
+    if (!authLoading && !isAuthenticated) {
+      router.replace("/auth?next=/report");
+    }
+  }, [authLoading, isAuthenticated, router]);
   const [tipType, setTipType] = useState<"news_tip" | "civic_issue">("news_tip");
   const [headline, setHeadline] = useState("");
   const [body, setBody] = useState("");
@@ -54,7 +65,15 @@ function PrivateTipContent() {
   const recorderRef = useRef<MediaRecorder | null>(null);
 
   const [submitting, setSubmitting] = useState(false);
-  const [submittedPost, setSubmittedPost] = useState<PostItem | null>(null);
+  const [submittedPost, setSubmittedPost] = useState<{
+    id: string;
+    title: string;
+    localityId: string;
+    category: PostCategory;
+    status: string;
+    submissionType: "news_tip" | "civic_issue";
+  } | null>(null);
+  const [submissionError, setSubmissionError] = useState<string | null>(null);
 
   const stopCameraStream = () => {
     streamRef.current?.getTracks().forEach((t) => t.stop());
@@ -127,29 +146,39 @@ function PrivateTipContent() {
     }
 
     const chunks: Blob[] = [];
-    const recorder = new MediaRecorder(streamRef.current);
+    const recorder = new MediaRecorder(streamRef.current, {
+      videoBitsPerSecond: 512000,
+    });
     recorder.ondataavailable = (ev) => {
       if (ev.data.size > 0) chunks.push(ev.data);
     };
     recorder.onstop = () => {
       const blob = new Blob(chunks, { type: "video/webm" });
-      const url = URL.createObjectURL(blob);
-      setMediaItems((prev) => [
-        ...prev,
-        {
-          mediaType: "video",
-          url,
-          aspectRatio: "9:16",
-          caption: "Private evidence clip",
-          durationSeconds: 10,
-        },
-      ]);
+      const reader = new FileReader();
+      reader.onload = () => {
+        if (typeof reader.result === "string") {
+          setMediaItems((prev) => [
+            ...prev,
+            {
+              mediaType: "video",
+              url: reader.result as string,
+              aspectRatio: "9:16",
+              caption: "Private evidence clip.webm",
+              durationSeconds: 10,
+            },
+          ]);
+        }
+      };
+      reader.readAsDataURL(blob);
       stopCameraStream();
       showToast("Evidence video attached privately");
     };
     recorderRef.current = recorder;
     recorder.start();
     setRecording(true);
+    window.setTimeout(() => {
+      if (recorder.state === "recording") recorder.stop();
+    }, 10000);
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -215,34 +244,46 @@ function PrivateTipContent() {
     e.preventDefault();
     if (!requireAuth("submit a private news tip or civic report")) return;
     if (!headline.trim() || !body.trim()) return;
+    setSubmissionError(null);
     setSubmitting(true);
     try {
-      const res = await fetch("/api/posts", {
+      const res = await fetch("/api/civic-reports", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          authorId: currentUser.id,
-          authorName: currentUser.fullName,
-          authorUsername: currentUser.username,
+          submissionType: tipType,
           localityId,
           category: tipType === "civic_issue" ? "civic" : category,
-          headline: headline.trim(),
-          body: body.trim(),
-          isMoment: false,
+          title: headline.trim(),
+          details: body.trim(),
           sharePreciseLocation,
           preciseLat: sharePreciseLocation ? gpsCoords?.lat ?? null : null,
           preciseLng: sharePreciseLocation ? gpsCoords?.lng ?? null : null,
           approxLandmark: approxLandmark.trim(),
-          media: mediaItems,
+          attachments: mediaItems.map((item) => ({
+            fileName: item.caption ?? "evidence",
+            dataUrl: item.url,
+          })),
         }),
       });
+      const data = await res.json();
       if (res.ok) {
-        const data = await res.json();
-        setSubmittedPost(data.post);
-        showToast("Private submission received by Pethri Editors");
+        setSubmittedPost(data.submission);
+        showToast(
+          tipType === "civic_issue"
+            ? "Private civic report received"
+            : "Private news tip received"
+        );
       } else {
-        showToast("Failed to submit private tip", "error");
+        const message = data.error ?? "Failed to submit private report.";
+        setSubmissionError(message);
+        showToast(message, "error");
       }
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Unable to submit privately.";
+      setSubmissionError(message);
+      showToast(message, "error");
     } finally {
       setSubmitting(false);
     }
@@ -251,36 +292,41 @@ function PrivateTipContent() {
   if (submittedPost) {
     return (
       <div className="mx-auto max-w-2xl px-4 py-10">
-        <div className="rounded-3xl border border-[#E5E3DC] bg-white p-8 text-center shadow-xs">
-          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[#EAF2EE] text-[#1B5E43]">
+        <div className="rounded-3xl border border-[#E2E7F0] bg-white p-8 text-center shadow-xs">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[#EEF2FF] text-[#173FBE]">
             <CheckCircle2 className="h-8 w-8" />
           </div>
-          <h1 className="mt-4 font-display text-2xl font-extrabold text-[#181917]">
-            Private Tip Received Confidentially
+          <h1 className="mt-4 font-display text-2xl font-extrabold text-[#111318]">
+            Private Submission Received
           </h1>
-          <p className="mt-2 text-sm text-[#5A605C]">
+          <p className="mt-2 text-sm text-[#5B6472]">
             Thank you, <span className="font-bold">{currentUser.fullName}</span>.
-            Your submission has been routed privately to the Pethri Editorial
-            Desk. Public submissions never appear automatically on Pethri.com.
+            Your {submittedPost.submissionType === "civic_issue" ? "civic report" : "news tip"} has been routed privately to the Pethri Editorial Desk. Public submissions never appear automatically on Pethri.com.
           </p>
-          <div className="mt-5 rounded-2xl border border-[#E5E3DC] bg-[#F8F7F4] p-4 text-left">
-            <p className="text-xs font-bold text-[#1B5E43]">
-              {submittedPost.localityName} •{" "}
+          <div className="mt-5 rounded-2xl border border-[#E2E7F0] bg-[#FFFFFF] p-4 text-left">
+            <p className="text-xs font-bold text-[#173FBE]">
+              {localities.find((locality) => locality.id === submittedPost.localityId)?.name ?? "Karavali"} •{" "}
               {CATEGORY_META[submittedPost.category].label}
             </p>
-            <p className="mt-1 font-editorial text-xl text-[#181917]">
-              {submittedPost.headline}
+            <p className="mt-1 font-editorial text-xl text-[#111318]">
+              {submittedPost.title}
             </p>
-            <p className="mt-1 text-xs text-[#5A605C]">
-              Status: Private Newsroom Review (Not Publicly Visible)
+            <p className="mt-1 text-xs text-[#5B6472]">
+              Status: {submittedPost.status.replaceAll("_", " ")} (Not Publicly Visible)
             </p>
           </div>
           <div className="mt-6 flex flex-wrap justify-center gap-3">
             <Link
-              href="/profile"
-              className="rounded-full bg-[#1B5E43] px-5 py-2.5 text-xs font-extrabold text-white hover:bg-[#398BFF] transition-colors"
+              href={
+                submittedPost.submissionType === "civic_issue"
+                  ? "/civic-reports"
+                  : "/profile"
+              }
+              className="rounded-full bg-[#173FBE] px-5 py-2.5 text-xs font-extrabold text-white hover:bg-[#315CFF] transition-colors"
             >
-              Track Status in Profile
+              {submittedPost.submissionType === "civic_issue"
+                ? "Track Civic Report"
+                : "Track Tip in Profile"}
             </Link>
             <button
               type="button"
@@ -290,7 +336,7 @@ function PrivateTipContent() {
                 setBody("");
                 setMediaItems([]);
               }}
-              className="rounded-full border border-[#E5E3DC] px-5 py-2.5 text-xs font-bold text-[#181917] hover:border-[#398BFF] hover:text-[#398BFF] transition-colors"
+              className="rounded-full border border-[#E2E7F0] px-5 py-2.5 text-xs font-bold text-[#111318] hover:border-[#315CFF] hover:text-[#315CFF] transition-colors"
             >
               Submit Another Tip
             </button>
@@ -300,49 +346,71 @@ function PrivateTipContent() {
     );
   }
 
+  if (!pageHydrated || authLoading || !isAuthenticated) {
+    return (
+      <div className="mx-auto max-w-xl px-4 py-14">
+        <div className="rounded-3xl border border-[#E2E7F0] bg-white p-8 text-center">
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-[#EEF2FF] text-[#173FBE]">
+            <Lock className="h-6 w-6" />
+          </div>
+          <h1 className="mt-4 font-display text-2xl font-extrabold text-[#111318]">
+            {!pageHydrated || authLoading
+              ? "Checking your session..."
+              : "Sign in to Submit Private News Tips"}
+          </h1>
+          <p className="mt-2 text-sm text-[#5B6472]">
+            Private news tip intake is protected so Pethri editors can verify
+            leads securely.
+          </p>
+          <div className="mt-6 flex flex-wrap justify-center gap-3">
+            <Link
+              href="/auth?next=/report"
+              className="rounded-full bg-[#173FBE] px-6 py-3 text-xs font-extrabold text-white hover:bg-[#315CFF] transition-colors"
+            >
+              Sign In with Pethri Account
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="mx-auto max-w-4xl px-4 py-6 space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#E5E3DC] pb-5">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#E2E7F0] pb-5">
         <div>
-          <p className="font-mono text-[10px] font-bold uppercase tracking-widest text-[#1B5E43]">
+          <p className="font-mono text-[10px] font-bold uppercase tracking-widest text-[#173FBE]">
             PRIVATE NEWSROOM INTAKE • KARAVALI
           </p>
-          <h1 className="mt-1 font-display text-2xl sm:text-3xl font-extrabold text-[#181917]">
+          <h1 className="mt-1 font-display text-2xl sm:text-3xl font-extrabold text-[#111318]">
             Submit Private News Tip or Civic Issue
           </h1>
         </div>
-        <span className="inline-flex items-center gap-1.5 rounded-full bg-[#EAF2EE] border border-[#E5E3DC] px-3.5 py-1 text-xs font-bold text-[#1B5E43]">
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-[#EEF2FF] border border-[#E2E7F0] px-3.5 py-1 text-xs font-bold text-[#173FBE]">
           <ShieldCheck className="h-3.5 w-3.5" />
           Private Review • Never Auto-Published
         </span>
       </div>
 
-      {!isAuthenticated && (
-        <div className="rounded-2xl border border-[#E5E3DC] bg-[#EAF2EE] p-4 flex flex-wrap items-center justify-between gap-3">
-          <div className="text-xs text-[#181917]">
-            <strong>Sign in required to submit:</strong> You can draft below,
-            and signing in ensures newsroom editors can follow up securely.
-          </div>
-          <Link
-            href="/auth"
-            className="rounded-full bg-[#1B5E43] px-4 py-2 text-xs font-extrabold text-white hover:bg-[#398BFF] transition-colors"
-          >
-            Sign In
-          </Link>
-        </div>
-      )}
-
       <form
         onSubmit={handleSubmit}
         className="grid gap-6 lg:grid-cols-12 items-start"
       >
+        {submissionError && (
+          <div
+            role="alert"
+            className="lg:col-span-12 rounded-2xl border border-[#D94E34]/30 bg-[#D94E34]/10 p-3 text-sm text-[#D94E34]"
+          >
+            {submissionError}
+          </div>
+        )}
         {/* Optional Private Evidence */}
-        <div className="lg:col-span-5 space-y-4 rounded-3xl border border-[#E5E3DC] bg-white p-5">
+        <div className="lg:col-span-5 space-y-4 rounded-3xl border border-[#E2E7F0] bg-white p-5">
           <div>
-            <h2 className="text-sm font-extrabold text-[#181917]">
+            <h2 className="text-sm font-extrabold text-[#111318]">
               1. Optional Evidence (Private to Editors)
             </h2>
-            <p className="mt-1 text-[11px] text-[#5A605C]">
+            <p className="mt-1 text-[11px] text-[#5B6472]">
               Uploaded media stays confidential inside the editorial inbox and
               is never published automatically.
             </p>
@@ -352,7 +420,7 @@ function PrivateTipContent() {
             <button
               type="button"
               onClick={() => openCamera(false)}
-              className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-[#E5E3DC] bg-[#F8F7F4] px-3 py-2.5 text-xs font-bold text-[#181917] hover:border-[#398BFF] hover:text-[#398BFF] transition-colors"
+              className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-[#E2E7F0] bg-[#FFFFFF] px-3 py-2.5 text-xs font-bold text-[#111318] hover:border-[#315CFF] hover:text-[#315CFF] transition-colors"
             >
               <Camera className="h-4 w-4" />
               Take Photo
@@ -360,7 +428,7 @@ function PrivateTipContent() {
             <button
               type="button"
               onClick={() => openCamera(true)}
-              className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-[#E5E3DC] bg-[#F8F7F4] px-3 py-2.5 text-xs font-bold text-[#181917] hover:border-[#398BFF] hover:text-[#398BFF] transition-colors"
+              className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-[#E2E7F0] bg-[#FFFFFF] px-3 py-2.5 text-xs font-bold text-[#111318] hover:border-[#315CFF] hover:text-[#315CFF] transition-colors"
             >
               <Video className="h-4 w-4" />
               Record Clip
@@ -368,13 +436,13 @@ function PrivateTipContent() {
           </div>
 
           {cameraError && (
-            <p className="rounded-xl border border-[#E5E3DC] bg-[#F8F7F4] p-2.5 text-[11px] text-[#181917]">
+            <p className="rounded-xl border border-[#E2E7F0] bg-[#FFFFFF] p-2.5 text-[11px] text-[#111318]">
               {cameraError}
             </p>
           )}
 
           {cameraOpen && (
-            <div className="space-y-2 rounded-2xl bg-[#181917] p-2">
+            <div className="space-y-2 rounded-2xl bg-[#111318] p-2">
               <video
                 ref={videoRef}
                 autoPlay
@@ -386,7 +454,7 @@ function PrivateTipContent() {
                 <button
                   type="button"
                   onClick={snapPhoto}
-                  className="rounded-full bg-[#398BFF] px-4 py-1.5 text-xs font-extrabold text-white"
+                  className="rounded-full bg-[#315CFF] px-4 py-1.5 text-xs font-extrabold text-white"
                 >
                   Snap Photo
                 </button>
@@ -411,12 +479,12 @@ function PrivateTipContent() {
             </div>
           )}
 
-          <label className="flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-[#E5E3DC] bg-[#F8F7F4] p-5 text-center hover:border-[#398BFF] transition-colors">
-            <ImagePlus className="h-6 w-6 text-[#1B5E43]" />
-            <span className="mt-1.5 text-xs font-bold text-[#181917]">
+          <label className="flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-[#E2E7F0] bg-[#FFFFFF] p-5 text-center hover:border-[#315CFF] transition-colors">
+            <ImagePlus className="h-6 w-6 text-[#173FBE]" />
+            <span className="mt-1.5 text-xs font-bold text-[#111318]">
               Attach Photo or Video Evidence
             </span>
-            <span className="text-[11px] text-[#5A605C]">
+            <span className="text-[11px] text-[#5B6472]">
               Optional • Reviewed privately by Pethri editors
             </span>
             <input
@@ -430,14 +498,14 @@ function PrivateTipContent() {
 
           {mediaItems.length > 0 && (
             <div className="space-y-2">
-              <p className="text-[11px] font-bold uppercase tracking-wider text-[#5A605C]">
+              <p className="text-[11px] font-bold uppercase tracking-wider text-[#5B6472]">
                 Attached Evidence ({mediaItems.length})
               </p>
               <div className="grid grid-cols-2 gap-2">
                 {mediaItems.map((m, idx) => (
                   <div
                     key={idx}
-                    className="relative overflow-hidden rounded-xl border border-[#E5E3DC] bg-[#F8F7F4]"
+                    className="relative overflow-hidden rounded-xl border border-[#E2E7F0] bg-[#FFFFFF]"
                   >
                     {m.mediaType === "video" ? (
                       <video src={m.url} className="h-24 w-full object-cover" />
@@ -456,7 +524,7 @@ function PrivateTipContent() {
                           prev.filter((_, i) => i !== idx)
                         )
                       }
-                      className="absolute right-1.5 top-1.5 rounded-full bg-[#181917]/80 p-1 text-white hover:bg-[#D94E34]"
+                      className="absolute right-1.5 top-1.5 rounded-full bg-[#111318]/80 p-1 text-white hover:bg-[#D94E34]"
                     >
                       <Trash2 className="h-3 w-3" />
                     </button>
@@ -468,20 +536,20 @@ function PrivateTipContent() {
         </div>
 
         {/* Tip Details */}
-        <div className="lg:col-span-7 space-y-4 rounded-3xl border border-[#E5E3DC] bg-white p-5">
+        <div className="lg:col-span-7 space-y-4 rounded-3xl border border-[#E2E7F0] bg-white p-5">
           <div className="flex items-center justify-between gap-2">
-            <h2 className="text-sm font-extrabold text-[#181917]">
+            <h2 className="text-sm font-extrabold text-[#111318]">
               2. Tip Summary, Locality &amp; Privacy
             </h2>
-            <div className="flex rounded-full border border-[#E5E3DC] bg-[#F8F7F4] p-0.5 text-[11px] font-bold">
+            <div className="flex rounded-full border border-[#E2E7F0] bg-[#FFFFFF] p-0.5 text-[11px] font-bold">
               <button
                 type="button"
                 onClick={() => setTipType("news_tip")}
                 className={cn(
                   "rounded-full px-3 py-1 transition-colors",
                   tipType === "news_tip"
-                    ? "bg-[#1B5E43] text-white"
-                    : "text-[#5A605C]"
+                    ? "bg-[#173FBE] text-white"
+                    : "text-[#5B6472]"
                 )}
               >
                 News Tip
@@ -492,8 +560,8 @@ function PrivateTipContent() {
                 className={cn(
                   "rounded-full px-3 py-1 transition-colors",
                   tipType === "civic_issue"
-                    ? "bg-[#1B5E43] text-white"
-                    : "text-[#5A605C]"
+                    ? "bg-[#173FBE] text-white"
+                    : "text-[#5B6472]"
                 )}
               >
                 Civic Issue
@@ -503,7 +571,7 @@ function PrivateTipContent() {
 
           <div className="space-y-3">
             <div>
-              <label className="block text-xs font-bold text-[#181917] mb-1">
+              <label className="block text-xs font-bold text-[#111318] mb-1">
                 Subject / Headline *
               </label>
               <input
@@ -512,12 +580,12 @@ function PrivateTipContent() {
                 value={headline}
                 onChange={(e) => setHeadline(e.target.value)}
                 placeholder="Brief factual summary for our editorial desk..."
-                className="w-full rounded-xl border border-[#E5E3DC] px-3.5 py-2.5 text-sm outline-none focus:border-[#398BFF]"
+                className="w-full rounded-xl border border-[#E2E7F0] px-3.5 py-2.5 text-sm outline-none focus:border-[#315CFF]"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-[#181917] mb-1">
+              <label className="block text-xs font-bold text-[#111318] mb-1">
                 Details &amp; Context *
               </label>
               <textarea
@@ -526,20 +594,20 @@ function PrivateTipContent() {
                 value={body}
                 onChange={(e) => setBody(e.target.value)}
                 placeholder="What happened, when, who is affected, and any source details for verification..."
-                className="w-full rounded-xl border border-[#E5E3DC] px-3.5 py-2.5 text-sm outline-none focus:border-[#398BFF]"
+                className="w-full rounded-xl border border-[#E2E7F0] px-3.5 py-2.5 text-sm outline-none focus:border-[#315CFF]"
               />
             </div>
 
             <div className="grid gap-3 sm:grid-cols-2">
               <div>
-                <label className="block text-xs font-bold text-[#181917] mb-1">
+                <label className="block text-xs font-bold text-[#111318] mb-1">
                   Topic *
                 </label>
                 <select
                   value={tipType === "civic_issue" ? "civic" : category}
                   onChange={(e) => setCategory(e.target.value as PostCategory)}
                   disabled={tipType === "civic_issue"}
-                  className="w-full rounded-xl border border-[#E5E3DC] px-3 py-2.5 text-xs font-semibold outline-none focus:border-[#398BFF] disabled:bg-[#F8F7F4]"
+                  className="w-full rounded-xl border border-[#E2E7F0] px-3 py-2.5 text-xs font-semibold outline-none focus:border-[#315CFF] disabled:bg-[#FFFFFF]"
                 >
                   {(Object.keys(CATEGORY_META) as PostCategory[]).map((key) => (
                     <option key={key} value={key}>
@@ -550,14 +618,14 @@ function PrivateTipContent() {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-[#181917] mb-1">
+                <label className="block text-xs font-bold text-[#111318] mb-1">
                   Karavali Locality *
                 </label>
                 <div className="flex gap-1.5">
                   <select
                     value={localityId}
                     onChange={(e) => setLocalityId(e.target.value)}
-                    className="flex-1 rounded-xl border border-[#E5E3DC] px-3 py-2.5 text-xs font-semibold outline-none focus:border-[#398BFF]"
+                    className="flex-1 rounded-xl border border-[#E2E7F0] px-3 py-2.5 text-xs font-semibold outline-none focus:border-[#315CFF]"
                   >
                     {localities.map((loc) => (
                       <option key={loc.id} value={loc.id}>
@@ -569,7 +637,7 @@ function PrivateTipContent() {
                     type="button"
                     onClick={handleRequestGps}
                     title="Auto-detect locality via GPS"
-                    className="inline-flex items-center gap-1 rounded-xl border border-[#E5E3DC] bg-[#F8F7F4] px-3 text-xs font-bold text-[#1B5E43] hover:border-[#398BFF] hover:text-[#398BFF] transition-colors"
+                    className="inline-flex items-center gap-1 rounded-xl border border-[#E2E7F0] bg-[#FFFFFF] px-3 text-xs font-bold text-[#173FBE] hover:border-[#315CFF] hover:text-[#315CFF] transition-colors"
                   >
                     <LocateFixed className="h-3.5 w-3.5" />
                     GPS
@@ -579,17 +647,17 @@ function PrivateTipContent() {
             </div>
 
             {gpsMessage && (
-              <p className="rounded-xl border border-[#E5E3DC] bg-[#EAF2EE] px-3 py-2 text-[11px] font-medium text-[#1B5E43]">
+              <p className="rounded-xl border border-[#E2E7F0] bg-[#EEF2FF] px-3 py-2 text-[11px] font-medium text-[#173FBE]">
                 {gpsMessage}
               </p>
             )}
 
             <div>
-              <label className="block text-xs font-bold text-[#181917] mb-1">
+              <label className="block text-xs font-bold text-[#111318] mb-1">
                 Nearest Landmark (Optional)
               </label>
-              <div className="flex items-center gap-2 rounded-xl border border-[#E5E3DC] px-3 py-2 focus-within:border-[#398BFF]">
-                <MapPin className="h-4 w-4 text-[#1B5E43]" />
+              <div className="flex items-center gap-2 rounded-xl border border-[#E2E7F0] px-3 py-2 focus-within:border-[#315CFF]">
+                <MapPin className="h-4 w-4 text-[#173FBE]" />
                 <input
                   type="text"
                   value={approxLandmark}
@@ -600,30 +668,41 @@ function PrivateTipContent() {
               </div>
             </div>
 
-            <div className="rounded-2xl border border-[#E5E3DC] bg-[#F8F7F4] p-3.5">
-              <label className="flex items-start gap-2.5 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={sharePreciseLocation}
-                  onChange={(e) => setSharePreciseLocation(e.target.checked)}
-                  className="mt-0.5 accent-[#1B5E43]"
-                />
-                <div>
-                  <span className="flex items-center gap-1.5 text-xs font-bold text-[#181917]">
-                    <Lock className="h-3.5 w-3.5 text-[#1B5E43]" />
-                    Allow editors to see exact GPS coordinates (Optional)
-                  </span>
-                  <span className="mt-0.5 block text-[11px] text-[#5A605C]">
-                    Off by default. Your exact street coordinates are never
-                    exposed publicly without explicit consent.
-                  </span>
-                </div>
-              </label>
-            </div>
+            {privacyLocalityOnlyDefault ? (
+              <p className="rounded-2xl border border-[#E2E7F0] bg-[#FFFFFF] p-3.5 text-[11px] text-[#5B6472]">
+                Precise GPS is disabled by your Locality-Only preference. You
+                can enable per-tip GPS consent in{" "}
+                <Link href="/settings" className="font-bold text-[#173FBE] underline">
+                  Settings
+                </Link>
+                .
+              </p>
+            ) : (
+              <div className="rounded-2xl border border-[#E2E7F0] bg-[#FFFFFF] p-3.5">
+                <label className="flex items-start gap-2.5 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={sharePreciseLocation}
+                    onChange={(e) => setSharePreciseLocation(e.target.checked)}
+                    className="mt-0.5 accent-[#173FBE]"
+                  />
+                  <div>
+                    <span className="flex items-center gap-1.5 text-xs font-bold text-[#111318]">
+                      <Lock className="h-3.5 w-3.5 text-[#173FBE]" />
+                      Allow editors to see exact GPS coordinates (Optional)
+                    </span>
+                    <span className="mt-0.5 block text-[11px] text-[#5B6472]">
+                      Off by default. Your exact street coordinates are never
+                      exposed publicly without explicit consent.
+                    </span>
+                  </div>
+                </label>
+              </div>
+            )}
           </div>
 
-          <div className="flex items-center justify-between border-t border-[#E5E3DC] pt-4">
-            <span className="text-[11px] text-[#5A605C]">
+          <div className="flex items-center justify-between border-t border-[#E2E7F0] pt-4">
+            <span className="text-[11px] text-[#5B6472]">
               {isAuthenticated
                 ? `Submitting as ${currentUser.fullName}`
                 : "Sign in required on submission"}
@@ -631,7 +710,7 @@ function PrivateTipContent() {
             <button
               type="submit"
               disabled={submitting || !headline.trim() || !body.trim()}
-              className="rounded-full bg-[#1B5E43] px-6 py-3 text-xs font-extrabold text-white hover:bg-[#398BFF] disabled:opacity-50 transition-colors"
+              className="rounded-full bg-[#173FBE] px-6 py-3 text-xs font-extrabold text-white hover:bg-[#315CFF] disabled:opacity-50 transition-colors"
             >
               {submitting ? "Sending..." : "Send Confidentially to Newsroom"}
             </button>
@@ -646,7 +725,7 @@ export default function ReportPage() {
   return (
     <Suspense
       fallback={
-        <div className="mx-auto max-w-3xl px-4 py-12 text-center text-sm text-[#5A605C]">
+        <div className="mx-auto max-w-3xl px-4 py-12 text-center text-sm text-[#5B6472]">
           Loading Private Tip Intake...
         </div>
       }

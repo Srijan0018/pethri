@@ -10,6 +10,7 @@ import {
 import "./globals.css";
 import { PethriProvider } from "@/components/PethriProvider";
 import { AppShell } from "@/components/AppShell";
+import { SITE_URL } from "@/lib/site";
 
 const jakarta = Plus_Jakarta_Sans({
   subsets: ["latin"],
@@ -43,10 +44,35 @@ const jetbrains = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title:
-    "Pethri.com — Karavali Hyperlocal Social News & Live Community Network",
+  metadataBase: SITE_URL,
+  title: {
+    default: "Pethri.com — Karavali Hyperlocal News & Community",
+    template: "%s | Pethri.com",
+  },
   description:
     "Verified local news, Instagram-style community moments, and live broadcasting across Mangaluru, Udupi, Manipal, Kundapura, and Pethri.",
+  alternates: { canonical: "/" },
+  openGraph: {
+    type: "website",
+    siteName: "Pethri.com",
+    title: "Pethri.com — Karavali Hyperlocal News & Community",
+    description:
+      "Verified local news and community updates across Mangaluru, Udupi, Manipal, Kundapura, and Pethri.",
+    url: "/",
+    images: [{ url: "/images/pethri-logo.jpg", alt: "Pethri.com" }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Pethri.com — Karavali Hyperlocal News & Community",
+    description:
+      "Verified local news and community updates across the Karavali coast.",
+    images: ["/images/pethri-logo.jpg"],
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: { index: true, follow: true },
+  },
 };
 
 export default function RootLayout({
@@ -59,12 +85,12 @@ export default function RootLayout({
       lang="en"
       className={`${jakarta.variable} ${kannada.variable} ${syne.variable} ${instrument.variable} ${jetbrains.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col bg-[#F8F7F4] text-[#181917]">
-        <PethriProvider>
-          <Suspense fallback={<div className="min-h-screen bg-[#F8F7F4]" />}>
+      <body className="min-h-full flex flex-col bg-white text-[#111318]">
+        <Suspense fallback={<div className="min-h-screen bg-[#FFFFFF]" />}>
+          <PethriProvider>
             <AppShell>{children}</AppShell>
-          </Suspense>
-        </PethriProvider>
+          </PethriProvider>
+        </Suspense>
       </body>
     </html>
   );

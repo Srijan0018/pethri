@@ -2,7 +2,7 @@
 
 import React, { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   Bell,
   Bookmark,
@@ -24,6 +24,7 @@ import { CATEGORY_META, cn } from "@/lib/utils";
 import type { PostCategory, PostItem } from "@/types/pethri";
 
 function ProfileContent() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const requestedUsername = searchParams.get("user");
   const initialTab =
@@ -31,6 +32,9 @@ function ProfileContent() {
   const {
     currentUser,
     isAuthenticated,
+    authMode,
+    authLoading,
+    authEmail,
     localities,
     notifications,
     markNotificationsRead,
@@ -57,6 +61,12 @@ function ProfileContent() {
   }, [initialTab]);
 
   useEffect(() => {
+    if (!authLoading && isOwnProfile && !isAuthenticated) {
+      router.replace("/auth?next=/profile");
+    }
+  }, [authLoading, isOwnProfile, isAuthenticated, router]);
+
+  useEffect(() => {
     setLoading(true);
     fetch(`/api/posts?includePending=true`, {
       headers: isAuthenticated ? { "x-pethri-actor-id": currentUser.id } : undefined,
@@ -66,32 +76,28 @@ function ProfileContent() {
       .finally(() => setLoading(false));
   }, [isAuthenticated, currentUser.id]);
 
-  if (isOwnProfile && !isAuthenticated) {
+  if (isOwnProfile && (authLoading || !isAuthenticated)) {
     return (
       <div className="mx-auto max-w-xl px-4 py-14">
-        <div className="rounded-3xl border border-[#E5E3DC] bg-white p-8 text-center">
-          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-[#EAF2EE] text-[#1B5E43]">
+        <div className="rounded-3xl border border-[#E2E7F0] bg-white p-8 text-center">
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-[#EEF2FF] text-[#173FBE]">
             <Lock className="h-6 w-6" />
           </div>
-          <h1 className="mt-4 font-display text-2xl font-extrabold text-[#181917]">
-            Your Pethri Profile &amp; Saved Stories
+          <h1 className="mt-4 font-display text-2xl font-extrabold text-[#111318]">
+            {authLoading
+              ? "Checking your session..."
+              : "Redirecting to Sign In"}
           </h1>
-          <p className="mt-2 text-sm text-[#5A605C]">
-            Sign in to manage followed Karavali localities, topic interests,
-            bookmarked stories, notifications, and private news tips.
+          <p className="mt-2 text-sm text-[#5B6472]">
+            Sign in with Supabase Auth or a demo preview profile to access your
+            private Pethri profile and saved stories.
           </p>
           <div className="mt-6 flex flex-wrap justify-center gap-3">
             <Link
-              href="/auth"
-              className="rounded-full bg-[#1B5E43] px-6 py-3 text-xs font-extrabold text-white hover:bg-[#398BFF] transition-colors"
+              href="/auth?next=/profile"
+              className="rounded-full bg-[#173FBE] px-6 py-3 text-xs font-extrabold text-white hover:bg-[#315CFF] transition-colors"
             >
-              Sign In / Create Account
-            </Link>
-            <Link
-              href="/"
-              className="rounded-full border border-[#E5E3DC] px-6 py-3 text-xs font-bold text-[#181917] hover:border-[#398BFF]"
-            >
-              Continue Browsing
+              Go to Sign In
             </Link>
           </div>
         </div>
@@ -113,8 +119,8 @@ function ProfileContent() {
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-6 space-y-6">
-      <div className="overflow-hidden rounded-3xl border border-[#E5E3DC] bg-white">
-        <div className="h-24 bg-[#1B5E43] border-b-[3px] border-[#398BFF]" />
+      <div className="overflow-hidden rounded-3xl border border-[#E2E7F0] bg-white">
+        <div className="h-24 bg-[#173FBE] border-b-[3px] border-[#315CFF]" />
         <div className="px-6 pb-6">
           <div className="flex flex-wrap items-end justify-between gap-4 -mt-12">
             <div className="flex items-end gap-4">
@@ -125,19 +131,22 @@ function ProfileContent() {
               />
               <div className="pt-12 sm:pt-0">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <h1 className="font-display text-2xl font-extrabold text-[#181917]">
+                  <h1 className="font-display text-2xl font-extrabold text-[#111318]">
                     {viewedProfile.fullName}
                   </h1>
                   {viewedProfile.isVerifiedReporter && (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-[#EAF2EE] border border-[#1B5E43]/25 px-2.5 py-0.5 text-[10px] font-extrabold text-[#1B5E43]">
+                    <span className="inline-flex items-center gap-1 rounded-full bg-[#EEF2FF] border border-[#173FBE]/25 px-2.5 py-0.5 text-[10px] font-extrabold text-[#173FBE]">
                       <ShieldCheck className="h-3 w-3" />
                       Accredited {viewedProfile.role}
                     </span>
                   )}
                 </div>
-                <p className="text-xs text-[#5A605C]">
-                  @{viewedProfile.username} •{" "}
-                  <span className="font-bold text-[#1B5E43]">
+                <p className="text-xs text-[#5B6472]">
+                  {authMode === "supabase" && isOwnProfile && authEmail
+                    ? `${authEmail} • Supabase Auth`
+                    : `@${viewedProfile.username}`}{" "}
+                  •{" "}
+                  <span className="font-bold text-[#173FBE]">
                     <MapPin className="inline h-3 w-3 mr-0.5" />
                     {viewedProfile.homeLocalityName}
                   </span>
@@ -148,7 +157,7 @@ function ProfileContent() {
             {isOwnProfile && (
               <Link
                 href="/report"
-                className="inline-flex items-center gap-1.5 rounded-full bg-[#1B5E43] px-4 py-2 text-xs font-extrabold text-white hover:bg-[#398BFF] transition-colors"
+                className="inline-flex items-center gap-1.5 rounded-full bg-[#173FBE] px-4 py-2 text-xs font-extrabold text-white hover:bg-[#315CFF] transition-colors"
               >
                 <FileText className="h-3.5 w-3.5" />
                 Submit Private Tip
@@ -156,30 +165,30 @@ function ProfileContent() {
             )}
           </div>
 
-          <p className="mt-4 max-w-2xl text-sm text-[#5A605C]">
+          <p className="mt-4 max-w-2xl text-sm text-[#5B6472]">
             {viewedProfile.bio}
           </p>
 
-          <div className="mt-5 flex flex-wrap gap-6 border-t border-[#E5E3DC] pt-4 text-xs">
+          <div className="mt-5 flex flex-wrap gap-6 border-t border-[#E2E7F0] pt-4 text-xs">
             <div>
-              <span className="font-display text-lg font-extrabold text-[#181917]">
+              <span className="font-display text-lg font-extrabold text-[#111318]">
                 {viewedProfile.followersCount}
               </span>
-              <span className="ml-1.5 text-[#5A605C]">Followers</span>
+              <span className="ml-1.5 text-[#5B6472]">Followers</span>
             </div>
             <div>
-              <span className="font-display text-lg font-extrabold text-[#181917]">
+              <span className="font-display text-lg font-extrabold text-[#111318]">
                 {myContributions.length}
               </span>
-              <span className="ml-1.5 text-[#5A605C]">
+              <span className="ml-1.5 text-[#5B6472]">
                 {viewedProfile.isVerifiedReporter ? "Reports" : "Private Tips"}
               </span>
             </div>
             <div>
-              <span className="font-display text-lg font-extrabold text-[#181917]">
+              <span className="font-display text-lg font-extrabold text-[#111318]">
                 {savedPosts.length}
               </span>
-              <span className="ml-1.5 text-[#5A605C]">Saved</span>
+              <span className="ml-1.5 text-[#5B6472]">Saved</span>
             </div>
           </div>
         </div>
@@ -193,8 +202,8 @@ function ProfileContent() {
           className={cn(
             "relative z-0 rounded-full px-5 py-2 text-xs font-bold transition-colors border",
             tab === "contributions"
-              ? "border-[#1B5E43] text-white"
-              : "bg-white border-[#E5E3DC] text-[#181917] hover:border-[#398BFF]"
+              ? "border-[#173FBE] text-white"
+              : "bg-white border-[#E2E7F0] text-[#111318] hover:border-[#315CFF]"
           )}
         >
           {tab === "contributions" && (
@@ -209,8 +218,8 @@ function ProfileContent() {
           className={cn(
             "relative z-0 inline-flex items-center gap-1.5 rounded-full px-5 py-2 text-xs font-bold transition-colors border",
             tab === "saved"
-              ? "border-[#1B5E43] text-white"
-              : "bg-white border-[#E5E3DC] text-[#181917] hover:border-[#398BFF]"
+              ? "border-[#173FBE] text-white"
+              : "bg-white border-[#E2E7F0] text-[#111318] hover:border-[#315CFF]"
           )}
         >
           {tab === "saved" && <AnimatedNavPill layoutId="profile-tab-pill" />}
@@ -225,8 +234,8 @@ function ProfileContent() {
               className={cn(
                 "relative z-0 inline-flex items-center gap-1.5 rounded-full px-5 py-2 text-xs font-bold transition-colors border",
                 tab === "interests"
-                  ? "border-[#1B5E43] text-white"
-                  : "bg-white border-[#E5E3DC] text-[#181917] hover:border-[#398BFF]"
+                  ? "border-[#173FBE] text-white"
+                  : "bg-white border-[#E2E7F0] text-[#111318] hover:border-[#315CFF]"
               )}
             >
               {tab === "interests" && (
@@ -241,8 +250,8 @@ function ProfileContent() {
               className={cn(
                 "relative z-0 inline-flex items-center gap-1.5 rounded-full px-5 py-2 text-xs font-bold transition-colors border",
                 tab === "notifications"
-                  ? "border-[#1B5E43] text-white"
-                  : "bg-white border-[#E5E3DC] text-[#181917] hover:border-[#398BFF]"
+                  ? "border-[#173FBE] text-white"
+                  : "bg-white border-[#E2E7F0] text-[#111318] hover:border-[#315CFF]"
               )}
             >
               {tab === "notifications" && (
@@ -256,16 +265,16 @@ function ProfileContent() {
       </div>
 
       {loading ? (
-        <div className="h-48 animate-pulse rounded-2xl bg-white border border-[#E5E3DC]" />
+        <div className="h-48 animate-pulse rounded-2xl bg-white border border-[#E2E7F0]" />
       ) : tab === "contributions" ? (
         myContributions.length === 0 ? (
-          <div className="rounded-2xl border border-[#E5E3DC] bg-white p-10 text-center">
-            <p className="text-sm font-bold text-[#181917]">
+          <div className="rounded-2xl border border-[#E2E7F0] bg-white p-10 text-center">
+            <p className="text-sm font-bold text-[#111318]">
               No submissions yet
             </p>
             <Link
               href="/report"
-              className="mt-3 inline-block rounded-full bg-[#1B5E43] px-4 py-2 text-xs font-extrabold text-white hover:bg-[#398BFF]"
+              className="mt-3 inline-block rounded-full bg-[#173FBE] px-4 py-2 text-xs font-extrabold text-white hover:bg-[#315CFF]"
             >
               Submit Private News Tip
             </Link>
@@ -278,10 +287,10 @@ function ProfileContent() {
                   className={cn(
                     "flex items-center justify-between rounded-xl border px-4 py-2 text-xs font-semibold",
                     post.moderationStatus === "approved"
-                      ? "bg-[#EAF2EE] border-[#1B5E43]/25 text-[#1B5E43]"
+                      ? "bg-[#EEF2FF] border-[#173FBE]/25 text-[#173FBE]"
                       : post.moderationStatus === "rejected"
                         ? "bg-[#D94E34]/10 border-[#D94E34]/35 text-[#D94E34]"
-                        : "bg-white border-[#E5E3DC] text-[#181917]"
+                        : "bg-white border-[#E2E7F0] text-[#111318]"
                   )}
                 >
                   <span className="inline-flex items-center gap-1.5">
@@ -290,7 +299,7 @@ function ProfileContent() {
                     ) : post.moderationStatus === "rejected" ? (
                       <XCircle className="h-4 w-4" />
                     ) : (
-                      <Clock className="h-4 w-4 text-[#398BFF]" />
+                      <Clock className="h-4 w-4 text-[#315CFF]" />
                     )}
                     Status:{" "}
                     <span className="uppercase">{post.moderationStatus}</span>
@@ -314,7 +323,7 @@ function ProfileContent() {
         )
       ) : tab === "saved" ? (
         savedPosts.length === 0 ? (
-          <div className="rounded-2xl border border-[#E5E3DC] bg-white p-10 text-center text-xs text-[#5A605C]">
+          <div className="rounded-2xl border border-[#E2E7F0] bg-white p-10 text-center text-xs text-[#5B6472]">
             Bookmark any story in News or Home to save it here.
           </div>
         ) : (
@@ -332,8 +341,8 @@ function ProfileContent() {
         )
       ) : tab === "interests" ? (
         <div className="grid gap-4 md:grid-cols-2">
-          <div className="rounded-2xl border border-[#E5E3DC] bg-white p-5 space-y-3">
-            <h2 className="font-display text-base font-extrabold text-[#181917]">
+          <div className="rounded-2xl border border-[#E2E7F0] bg-white p-5 space-y-3">
+            <h2 className="font-display text-base font-extrabold text-[#111318]">
               Followed Karavali Localities
             </h2>
             <div className="flex flex-wrap gap-2">
@@ -341,7 +350,7 @@ function ProfileContent() {
                 <Link
                   key={loc.id}
                   href={`/feed?locality=${loc.id}`}
-                  className="rounded-full bg-[#EAF2EE] border border-[#E5E3DC] px-3.5 py-1.5 text-xs font-bold text-[#1B5E43] hover:border-[#398BFF]"
+                  className="rounded-full bg-[#EEF2FF] border border-[#E2E7F0] px-3.5 py-1.5 text-xs font-bold text-[#173FBE] hover:border-[#315CFF]"
                 >
                   {loc.name}
                 </Link>
@@ -349,14 +358,14 @@ function ProfileContent() {
             </div>
             <Link
               href="/explore"
-              className="inline-block text-xs font-bold text-[#398BFF] hover:underline"
+              className="inline-block text-xs font-bold text-[#315CFF] hover:underline"
             >
               Manage localities in Explore →
             </Link>
           </div>
 
-          <div className="rounded-2xl border border-[#E5E3DC] bg-white p-5 space-y-3">
-            <h2 className="font-display text-base font-extrabold text-[#181917]">
+          <div className="rounded-2xl border border-[#E2E7F0] bg-white p-5 space-y-3">
+            <h2 className="font-display text-base font-extrabold text-[#111318]">
               Topic Interests
             </h2>
             <div className="flex flex-wrap gap-2">
@@ -370,8 +379,8 @@ function ProfileContent() {
                     className={cn(
                       "rounded-full px-3.5 py-1.5 text-xs font-bold border transition-colors",
                       active
-                        ? "bg-[#398BFF] border-[#398BFF] text-white"
-                        : "bg-[#F8F7F4] text-[#181917] border-[#E5E3DC] hover:border-[#398BFF]"
+                        ? "bg-[#315CFF] border-[#315CFF] text-white"
+                        : "bg-[#FFFFFF] text-[#111318] border-[#E2E7F0] hover:border-[#315CFF]"
                     )}
                   >
                     {CATEGORY_META[cat].label}
@@ -382,15 +391,15 @@ function ProfileContent() {
           </div>
         </div>
       ) : (
-        <div className="rounded-2xl border border-[#E5E3DC] bg-white p-5 space-y-3">
-          <div className="flex items-center justify-between border-b border-[#E5E3DC] pb-2.5">
-            <h2 className="font-display text-base font-extrabold text-[#181917]">
+        <div className="rounded-2xl border border-[#E2E7F0] bg-white p-5 space-y-3">
+          <div className="flex items-center justify-between border-b border-[#E2E7F0] pb-2.5">
+            <h2 className="font-display text-base font-extrabold text-[#111318]">
               Notification Inbox
             </h2>
             <button
               type="button"
               onClick={markNotificationsRead}
-              className="text-xs font-bold text-[#398BFF] hover:underline"
+              className="text-xs font-bold text-[#315CFF] hover:underline"
             >
               Mark all read
             </button>
@@ -403,19 +412,19 @@ function ProfileContent() {
                 className={cn(
                   "block rounded-xl p-3 border transition-colors",
                   n.isRead
-                    ? "border-[#E5E3DC] bg-[#F8F7F4]"
-                    : "border-[#1B5E43]/25 bg-[#EAF2EE]"
+                    ? "border-[#E2E7F0] bg-[#FFFFFF]"
+                    : "border-[#173FBE]/25 bg-[#EEF2FF]"
                 )}
               >
                 <div className="flex items-center justify-between text-xs">
-                  <span className="font-extrabold text-[#181917]">
+                  <span className="font-extrabold text-[#111318]">
                     {n.title}
                   </span>
-                  <span className="text-[11px] text-[#5A605C]">
+                  <span className="text-[11px] text-[#5B6472]">
                     <RelativeTime iso={n.createdAt} />
                   </span>
                 </div>
-                <p className="mt-1 text-xs text-[#5A605C]">{n.message}</p>
+                <p className="mt-1 text-xs text-[#5B6472]">{n.message}</p>
               </Link>
             ))}
           </div>
@@ -429,7 +438,7 @@ export default function ProfilePage() {
   return (
     <Suspense
       fallback={
-        <div className="mx-auto max-w-4xl px-4 py-12 text-center text-sm text-[#5A605C]">
+        <div className="mx-auto max-w-4xl px-4 py-12 text-center text-sm text-[#5B6472]">
           Loading profile...
         </div>
       }

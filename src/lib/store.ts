@@ -41,6 +41,9 @@ interface ReporterPermissionState {
   canPublishArticles: boolean;
   canUploadOfficialMedia: boolean;
   canStartBroadcasts: boolean;
+  canReviewTips: boolean;
+  canManageEvents: boolean;
+  canModerateComments: boolean;
   grantedBy: string;
   updatedAt: string;
 }
@@ -70,11 +73,22 @@ interface ArticleRevisionRecord {
 
 interface ModerationLogRecord {
   id: string;
-  targetType: "post" | "report";
+  targetType: "post" | "report" | "comment";
   targetId: string;
   action: string;
   moderatorId: string;
   notes?: string;
+  createdAt: string;
+}
+
+interface AuditLogRecord {
+  id: string;
+  actorId: string;
+  actorRole: UserRole;
+  action: string;
+  entityTable: string;
+  entityId: string;
+  summary: string;
   createdAt: string;
 }
 
@@ -94,6 +108,7 @@ interface PethriRuntimeStore {
   permissionHistory: PermissionHistoryRecord[];
   articleRevisions: ArticleRevisionRecord[];
   moderationLogs: ModerationLogRecord[];
+  auditLogs: AuditLogRecord[];
 }
 
 declare global {
@@ -120,6 +135,9 @@ function getRuntimeStore(): PethriRuntimeStore {
           canPublishArticles: true,
           canUploadOfficialMedia: true,
           canStartBroadcasts: true,
+          canReviewTips: true,
+          canManageEvents: true,
+          canModerateComments: true,
           grantedBy: "user-editor",
           updatedAt: new Date().toISOString(),
         },
@@ -128,6 +146,9 @@ function getRuntimeStore(): PethriRuntimeStore {
           canPublishArticles: true,
           canUploadOfficialMedia: true,
           canStartBroadcasts: false,
+          canReviewTips: true,
+          canManageEvents: true,
+          canModerateComments: false,
           grantedBy: "user-editor",
           updatedAt: new Date().toISOString(),
         },
@@ -136,6 +157,9 @@ function getRuntimeStore(): PethriRuntimeStore {
           canPublishArticles: false,
           canUploadOfficialMedia: false,
           canStartBroadcasts: false,
+          canReviewTips: false,
+          canManageEvents: false,
+          canModerateComments: false,
           grantedBy: "user-editor",
           updatedAt: new Date().toISOString(),
         },
@@ -143,13 +167,79 @@ function getRuntimeStore(): PethriRuntimeStore {
       permissionHistory: [],
       articleRevisions: [],
       moderationLogs: [],
+      auditLogs: [],
     };
   }
   return globalThis.__pethriRuntimeStore;
 }
 
+function recordAudit(input: {
+  actorId: string;
+  actorRole: UserRole;
+  action: string;
+  entityTable: string;
+  entityId: string;
+  summary: string;
+}) {
+  getRuntimeStore().auditLogs.unshift({
+    id: `audit-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    ...input,
+    createdAt: new Date().toISOString(),
+  });
+}
+
+export function getProfileById(userId?: string): UserProfile | null {
+  if (!userId) return null;
+  return getRuntimeStore().profiles.find((p) => p.id === userId) ?? null;
+}
+
+export function registerSupabaseActorProfile(input: {
+  id: string;
+  username: string;
+  fullName: string;
+  role: UserRole;
+  isVerifiedReporter: boolean;
+  isSuspended: boolean;
+}): UserProfile {
+  const store = getRuntimeStore();
+  const existing = store.profiles.find((p) => p.id === input.id);
+  if (existing) {
+    existing.role = input.role;
+    existing.isVerifiedReporter = input.isVerifiedReporter;
+    existing.isSuspended = input.isSuspended;
+    existing.fullName = input.fullName;
+    existing.username = input.username;
+    return existing;
+  }
+
+  const created: UserProfile = {
+    id: input.id,
+    username: input.username,
+    fullName: input.fullName,
+    avatarUrl: "/images/scenes/avatar-kavitha.svg",
+    bio: "Verified Pethri community member",
+    role: input.role,
+    homeLocalityId: "loc-pethri",
+    homeLocalityName: "Pethri",
+    isVerifiedReporter: input.isVerifiedReporter,
+    isSuspended: input.isSuspended,
+    joinedAt: new Date().toISOString(),
+    contributionsCount: 0,
+    followersCount: 0,
+  };
+  store.profiles.push(created);
+  return created;
+}
+
 export function isNewsroomAuthorized(role?: UserRole): boolean {
   return role === "journalist" || role === "editor" || role === "admin";
+}
+
+export function isWebsiteManager(actorId?: string): boolean {
+  if (!actorId) return false;
+  const actor = getRuntimeStore().profiles.find((p) => p.id === actorId);
+  if (!actor || actor.isSuspended) return false;
+  return actor.role === "admin";
 }
 
 export function isActorEditorialStaff(actorId?: string): boolean {
@@ -157,6 +247,128 @@ export function isActorEditorialStaff(actorId?: string): boolean {
   const actor = getRuntimeStore().profiles.find((p) => p.id === actorId);
   if (!actor || actor.isSuspended) return false;
   return isNewsroomAuthorized(actor.role) || actor.role === "correspondent";
+}
+
+export function hasReporterPermission(
+  actorId: string | undefined,
+  perm: "publish" | "media" | "live" | "tips" | "events" | "comments"
+): boolean {
+  if (!actorId) return false;
+  const store = getRuntimeStore();
+  const actor = store.profiles.find((p) => p.id === actorId);
+  if (!actor || actor.isSuspended) return false;
+  if (actor.role === "admin" || actor.role === "editor") return true;
+  if (actor.role !== "journalist" && actor.role !== "correspondent") {
+    return false;
+  }
+  const perms = store.reporterPermissions[actorId];
+  if (!perms) return false;
+  if (perm === "publish") return perms.canPublishArticles;
+  if (perm === "media") return perms.canUploadOfficialMedia;
+  if (perm === "live") return perms.canStartBroadcasts;
+  if (perm === "tips") return perms.canReviewTips ?? false;
+  if (perm === "events") return perms.canManageEvents ?? false;
+  if (perm === "comments") return perms.canModerateComments ?? false;
+  return false;
+}
+
+export function getReporterPermissionsMap() {
+  return getRuntimeStore().reporterPermissions;
+}
+
+export function setReporterPermission(input: {
+  actorId: string;
+  targetUserId: string;
+  canPublishArticles?: boolean;
+  canUploadOfficialMedia?: boolean;
+  canStartBroadcasts?: boolean;
+  canReviewTips?: boolean;
+  canManageEvents?: boolean;
+  canModerateComments?: boolean;
+}): {
+  permissions?: ReporterPermissionState;
+  error?: string;
+} {
+  const store = getRuntimeStore();
+  const actor = store.profiles.find((p) => p.id === input.actorId);
+  if (!actor || actor.isSuspended || !isWebsiteManager(actor.id)) {
+    return {
+      error:
+        "Forbidden: only a Website Manager can grant or revoke reporter permissions.",
+    };
+  }
+  if (input.targetUserId === actor.id) {
+    return {
+      error:
+        "Forbidden: users cannot grant or revoke their own permissions.",
+    };
+  }
+  const target = store.profiles.find((p) => p.id === input.targetUserId);
+  if (!target) {
+    return { error: "Target profile not found." };
+  }
+  const prev = store.reporterPermissions[target.id] ?? {
+    profileId: target.id,
+    canPublishArticles: target.role === "editor" || target.role === "admin",
+    canUploadOfficialMedia: target.role === "editor" || target.role === "admin",
+    canStartBroadcasts: target.role === "editor" || target.role === "admin",
+    canReviewTips: target.role === "editor" || target.role === "admin",
+    canManageEvents: target.role === "editor" || target.role === "admin",
+    canModerateComments: target.role === "editor" || target.role === "admin",
+    grantedBy: actor.id,
+    updatedAt: new Date().toISOString(),
+  };
+
+  const next: ReporterPermissionState = {
+    profileId: target.id,
+    canPublishArticles:
+      typeof input.canPublishArticles === "boolean"
+        ? input.canPublishArticles
+        : prev.canPublishArticles,
+    canUploadOfficialMedia:
+      typeof input.canUploadOfficialMedia === "boolean"
+        ? input.canUploadOfficialMedia
+        : prev.canUploadOfficialMedia,
+    canStartBroadcasts:
+      typeof input.canStartBroadcasts === "boolean"
+        ? input.canStartBroadcasts
+        : prev.canStartBroadcasts,
+    canReviewTips:
+      typeof input.canReviewTips === "boolean"
+        ? input.canReviewTips
+        : (prev.canReviewTips ?? false),
+    canManageEvents:
+      typeof input.canManageEvents === "boolean"
+        ? input.canManageEvents
+        : (prev.canManageEvents ?? false),
+    canModerateComments:
+      typeof input.canModerateComments === "boolean"
+        ? input.canModerateComments
+        : (prev.canModerateComments ?? false),
+    grantedBy: actor.id,
+    updatedAt: new Date().toISOString(),
+  };
+
+  store.reporterPermissions[target.id] = next;
+  store.permissionHistory.unshift({
+    id: `permh-${Date.now()}`,
+    targetProfileId: target.id,
+    changedBy: actor.id,
+    previousRole: target.role,
+    newRole: target.role,
+    summary: `Permissions updated for @${target.username}: publish=${next.canPublishArticles}, media=${next.canUploadOfficialMedia}, tips=${next.canReviewTips}, events=${next.canManageEvents}, comments=${next.canModerateComments}`,
+    createdAt: new Date().toISOString(),
+  });
+  recordAudit({
+    actorId: actor.id,
+    actorRole: actor.role,
+    action: "reporter_permission_updated",
+    entityTable: "reporter_permissions",
+    entityId: target.id,
+    summary: `Updated @${target.username} permissions (publish=${next.canPublishArticles}, media=${next.canUploadOfficialMedia}, live=${next.canStartBroadcasts})`,
+  });
+
+  return { permissions: next };
 }
 
 export interface ListPostsFilter {
@@ -530,10 +742,10 @@ export function createNewsroomDispatch(input: {
   const store = getRuntimeStore();
   const author = store.profiles.find((p) => p.id === input.authorId);
 
-  if (!author || !isNewsroomAuthorized(author.role) || author.isSuspended) {
+  if (!author || author.isSuspended || !hasReporterPermission(author.id, "publish")) {
     return {
       error:
-        "Unauthorized: only accredited Newsroom Journalists, Editors, or Admins may publish official dispatches or breaking news.",
+        "Forbidden: only authorised staff with active publishing permission can publish official newsroom dispatches.",
     };
   }
 
@@ -594,6 +806,14 @@ export function createNewsroomDispatch(input: {
   };
 
   store.posts.unshift(post);
+  recordAudit({
+    actorId: author.id,
+    actorRole: author.role,
+    action: "article_published",
+    entityTable: "posts",
+    entityId: post.id,
+    summary: `Published ${post.sourceKind} story "${post.headline.slice(0, 60)}"`,
+  });
   if (post.isBreaking) {
     store.notifications.unshift({
       id: `notif-${Date.now()}`,
@@ -830,10 +1050,10 @@ export function updateLiveBroadcast(input: {
 }): { broadcast?: LiveBroadcast; error?: string } {
   const store = getRuntimeStore();
   const actor = store.profiles.find((p) => p.id === input.actorId);
-  if (!actor || !isNewsroomAuthorized(actor.role) || actor.isSuspended) {
+  if (!actor || actor.isSuspended || !hasReporterPermission(actor.id, "live")) {
     return {
       error:
-        "Unauthorized: only accredited Newsroom staff can start or update official Live Broadcasts.",
+        "Forbidden: only authorised staff with live broadcast permission can operate Live Broadcasts.",
     };
   }
   const loc = store.localities.find((l) => l.id === input.localityId);
@@ -850,6 +1070,14 @@ export function updateLiveBroadcast(input: {
     target.startedAt = new Date().toISOString();
   }
   store.broadcast = target;
+  recordAudit({
+    actorId: actor.id,
+    actorRole: actor.role,
+    action: target.isLive ? "broadcast_started" : "broadcast_updated",
+    entityTable: "live_broadcasts",
+    entityId: target.id,
+    summary: `Live broadcast "${target.title.slice(0, 50)}" (isLive=${target.isLive})`,
+  });
   return { broadcast: target };
 }
 
@@ -961,10 +1189,23 @@ export function updateProfileGovernance(
     isSuspended?: boolean;
     actorId?: string;
   }
-): UserProfile | null {
+): { profile?: UserProfile; error?: string } {
   const store = getRuntimeStore();
+  const actor = store.profiles.find((p) => p.id === updates.actorId);
+  if (!actor || actor.isSuspended || !isWebsiteManager(actor.id)) {
+    return {
+      error:
+        "Forbidden: only a Website Manager can change user roles or accreditation.",
+    };
+  }
+  if (userId === actor.id) {
+    return {
+      error:
+        "Forbidden: users cannot modify their own role or accreditation status.",
+    };
+  }
   const profile = store.profiles.find((p) => p.id === userId);
-  if (!profile) return null;
+  if (!profile) return { error: "Profile not found." };
   const previousRole = profile.role;
   if (updates.role) profile.role = updates.role;
   if (typeof updates.isVerifiedReporter === "boolean") {
@@ -976,13 +1217,21 @@ export function updateProfileGovernance(
   store.permissionHistory.unshift({
     id: `permh-${Date.now()}`,
     targetProfileId: profile.id,
-    changedBy: updates.actorId ?? "user-editor",
+    changedBy: actor.id,
     previousRole,
     newRole: profile.role,
     summary: `Role/governance updated (${previousRole} -> ${profile.role})`,
     createdAt: new Date().toISOString(),
   });
-  return profile;
+  recordAudit({
+    actorId: actor.id,
+    actorRole: actor.role,
+    action: "profile_role_updated",
+    entityTable: "profiles",
+    entityId: profile.id,
+    summary: `Updated @${profile.username} role ${previousRole} -> ${profile.role}`,
+  });
+  return { profile };
 }
 
 export function listEditorialGovernanceLogs() {
@@ -991,6 +1240,7 @@ export function listEditorialGovernanceLogs() {
     articleRevisions: store.articleRevisions,
     moderationLogs: store.moderationLogs,
     permissionHistory: store.permissionHistory,
+    auditLogs: store.auditLogs,
   };
 }
 

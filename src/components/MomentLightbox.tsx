@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   ChevronLeft,
@@ -13,7 +14,7 @@ import {
 } from "lucide-react";
 import { RelativeTime } from "@/components/RelativeTime";
 import { VerificationBadge } from "@/components/VerificationBadge";
-import { cn } from "@/lib/utils";
+import { cn, isLocalImageSrc } from "@/lib/utils";
 import type { PostItem } from "@/types/pethri";
 
 interface MomentLightboxProps {
@@ -30,37 +31,71 @@ export function MomentLightbox({
   onLike,
 }: MomentLightboxProps) {
   const [index, setIndex] = useState(initialIndex);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const onCloseRef = useRef(onClose);
   const current = moments[index];
+  const media = current?.media[0];
+  const imageSrc = media?.url ?? "/images/photos/pethri-town.jpg";
 
   useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
+
+  useEffect(() => {
+    const previousFocus =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    closeButtonRef.current?.focus();
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") {
+        onCloseRef.current();
+        return;
+      }
       if (e.key === "ArrowRight") {
         setIndex((i) => Math.min(moments.length - 1, i + 1));
       }
       if (e.key === "ArrowLeft") {
         setIndex((i) => Math.max(0, i - 1));
       }
+      if (e.key === "Tab") {
+        const focusable = dialogRef.current?.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled]), video[controls], [tabindex]:not([tabindex="-1"])'
+        );
+        if (!focusable?.length) return;
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
     };
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [moments.length, onClose]);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      previousFocus?.focus();
+    };
+  }, [moments.length]);
 
   if (!current) return null;
-  const media = current.media[0];
-
   return (
     <div
       role="dialog"
       aria-modal="true"
       aria-label="Pethri Moment viewer"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-[#181917]/92 p-3 backdrop-blur-xs"
+      ref={dialogRef}
+      tabIndex={-1}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-[#111318]/92 p-3 backdrop-blur-xs"
     >
       <button
         type="button"
+        ref={closeButtonRef}
         onClick={onClose}
         aria-label="Close moment viewer"
-        className="absolute right-4 top-4 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-white/15 text-white hover:bg-[#398BFF] transition-colors"
+        className="absolute right-4 top-4 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-white/15 text-white hover:bg-[#315CFF] transition-colors"
       >
         <X className="h-5 w-5" />
       </button>
@@ -69,7 +104,7 @@ export function MomentLightbox({
         initial={{ opacity: 0, scale: 0.96 }}
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.96 }}
-        className="relative flex w-full max-w-md flex-col overflow-hidden rounded-2xl bg-[#181917] text-white shadow-2xl ring-1 ring-white/15 h-[84vh] max-h-[760px]"
+        className="relative flex w-full max-w-md flex-col overflow-hidden rounded-2xl bg-[#111318] text-white shadow-2xl ring-1 ring-white/15 h-[84vh] max-h-[760px]"
       >
         {/* Story Progress Bars */}
         <div className="flex gap-1.5 px-3 pt-3 z-10">
@@ -84,7 +119,7 @@ export function MomentLightbox({
               <div
                 className={cn(
                   "h-full rounded-full transition-all",
-                  idx <= index ? "w-full bg-[#398BFF]" : "w-0"
+                  idx <= index ? "w-full bg-[#315CFF]" : "w-0"
                 )}
               />
             </button>
@@ -94,17 +129,20 @@ export function MomentLightbox({
         {/* Author Top Overlay */}
         <div className="flex items-center justify-between gap-2 px-4 py-3 z-10">
           <div className="flex items-center gap-2.5 min-w-0">
-            <img
+            <Image
               src={current.author.avatarUrl}
               alt={current.author.fullName}
-              className="h-9 w-9 rounded-full object-cover ring-2 ring-[#398BFF]"
+              width={36}
+              height={36}
+              unoptimized={!isLocalImageSrc(current.author.avatarUrl)}
+              className="h-9 w-9 rounded-full object-cover ring-2 ring-[#315CFF]"
             />
             <div className="min-w-0">
               <p className="text-xs font-bold truncate">
                 {current.author.fullName}
               </p>
-              <p className="flex items-center gap-1 text-[11px] text-[#EAF2EE]">
-                <MapPin className="h-3 w-3 text-[#398BFF]" />
+              <p className="flex items-center gap-1 text-[11px] text-[#EEF2FF]">
+                <MapPin className="h-3 w-3 text-[#315CFF]" />
                 {current.localityName} • <RelativeTime iso={current.createdAt} />
               </p>
             </div>
@@ -140,15 +178,22 @@ export function MomentLightbox({
                 className="h-full w-full object-cover"
               />
             ) : (
-              <motion.img
+              <motion.div
                 key={current.id}
-                src={media?.url ?? "/images/photos/pethri-town.jpg"}
-                alt={current.headline}
                 initial={{ opacity: 0.65, scale: 1.02 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ duration: 0.25 }}
-                className="h-full w-full object-cover"
-              />
+                className="absolute inset-0"
+              >
+                <Image
+                  src={imageSrc}
+                  alt={current.headline}
+                  fill
+                  sizes="(max-width: 448px) 100vw, 448px"
+                  unoptimized={!isLocalImageSrc(imageSrc)}
+                  className="object-cover"
+                />
+              </motion.div>
             )}
           </AnimatePresence>
 
@@ -157,7 +202,7 @@ export function MomentLightbox({
               type="button"
               aria-label="Previous moment"
               onClick={() => setIndex((i) => i - 1)}
-              className="absolute left-2 top-1/2 -translate-y-1/2 flex h-9 w-9 items-center justify-center rounded-full bg-black/55 text-white hover:bg-[#398BFF] transition-colors"
+              className="absolute left-2 top-1/2 -translate-y-1/2 flex h-9 w-9 items-center justify-center rounded-full bg-black/55 text-white hover:bg-[#315CFF] transition-colors"
             >
               <ChevronLeft className="h-5 w-5" />
             </button>
@@ -167,7 +212,7 @@ export function MomentLightbox({
               type="button"
               aria-label="Next moment"
               onClick={() => setIndex((i) => i + 1)}
-              className="absolute right-2 top-1/2 -translate-y-1/2 flex h-9 w-9 items-center justify-center rounded-full bg-black/55 text-white hover:bg-[#398BFF] transition-colors"
+              className="absolute right-2 top-1/2 -translate-y-1/2 flex h-9 w-9 items-center justify-center rounded-full bg-black/55 text-white hover:bg-[#315CFF] transition-colors"
             >
               <ChevronRight className="h-5 w-5" />
             </button>
@@ -186,12 +231,12 @@ export function MomentLightbox({
                 <button
                   type="button"
                   onClick={() => onLike?.(current.id)}
-                  className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1.5 text-xs font-bold text-white hover:bg-[#398BFF] transition-colors"
+                  className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1.5 text-xs font-bold text-white hover:bg-[#315CFF] transition-colors"
                 >
                   <Heart
                     className={cn(
                       "h-4 w-4",
-                      current.likedByMe && "fill-[#398BFF] text-[#398BFF]"
+                      current.likedByMe && "fill-[#315CFF] text-[#315CFF]"
                     )}
                   />
                   <span>{current.likesCount}</span>
@@ -199,13 +244,13 @@ export function MomentLightbox({
                 <Link
                   href={`/article/${current.id}`}
                   onClick={onClose}
-                  className="inline-flex items-center gap-1 rounded-full bg-[#1B5E43] px-3.5 py-1.5 text-xs font-extrabold text-white hover:bg-[#398BFF] transition-colors"
+                  className="inline-flex items-center gap-1 rounded-full bg-[#173FBE] px-3.5 py-1.5 text-xs font-extrabold text-white hover:bg-[#315CFF] transition-colors"
                 >
                   <Share2 className="h-3.5 w-3.5" />
                   <span>Read Full Article</span>
                 </Link>
               </div>
-              <span className="text-[10px] font-mono text-[#EAF2EE]">
+              <span className="text-[10px] font-mono text-[#EEF2FF]">
                 {index + 1} / {moments.length}
               </span>
             </div>

@@ -1,53 +1,88 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
-  createCitizenPost,
-  createNewsroomDispatch,
-  listPosts,
-} from "@/lib/store";
-import type {
-  PostCategory,
-  PostFormat,
-  PostSourceKind,
-  VerificationTier,
-} from "@/types/pethri";
+  hasActorPermission,
+  resolveRequestActor,
+} from "@/lib/server-auth";
+import { createPostRepository, getPostsRepository } from "@/lib/repositories/posts";
+import { parsePagination, sanitizeText } from "@/lib/repositories/validation";
+import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
+import type { PostCategory, PostFormat } from "@/types/pethri";
 
 export async function GET(req: NextRequest) {
-  const { searchParams } = req.nextUrl;
-  const locality = searchParams.get("locality") ?? undefined;
-  const category = (searchParams.get("category") ?? "all") as
-    | PostCategory
-    | "all";
-  const verification = (searchParams.get("verification") ?? "all") as
-    | VerificationTier
-    | "all";
-  const sourceKind = (searchParams.get("sourceKind") ?? "all") as
-    | PostSourceKind
-    | "all";
-  const playlistSlug = searchParams.get("playlistSlug") ?? undefined;
-  const search = searchParams.get("search") ?? undefined;
-  const onlyMoments = searchParams.get("moments") === "true";
-  const requestedPending = searchParams.get("includePending") === "true";
-  const authorId = searchParams.get("authorId") ?? undefined;
-  const actorId = req.headers.get("x-pethri-actor-id") ?? undefined;
+  try {
+    const { searchParams } = req.nextUrl;
+    const locality = searchParams.get("locality") ?? undefined;
+    const category = searchParams.get("category") ?? undefined;
+    const verification = searchParams.get("verification") ?? undefined;
+    const sourceKind = searchParams.get("sourceKind") ?? undefined;
+    const playlistSlug = searchParams.get("playlistSlug") ?? undefined;
+    const search = searchParams.get("search") ?? undefined;
+    const onlyMoments = searchParams.get("moments") === "true";
+    const requestedPending = searchParams.get("includePending") === "true";
+    const authorId = searchParams.get("authorId") ?? undefined;
+    const { limit, offset } = parsePagination(searchParams);
 
-  const result = await listPosts({
-    locality,
-    category,
-    verification,
-    sourceKind,
-    playlistSlug,
-    search,
-    onlyMoments,
-    includePending: requestedPending,
-    authorId,
-    viewerId: actorId,
-  });
+    const actor = await resolveRequestActor(req);
 
-  return NextResponse.json(result);
+    const result = await getPostsRepository({
+      locality,
+      category,
+      verification,
+      sourceKind,
+      playlistSlug,
+      search,
+      onlyMoments,
+      includePending:
+        requestedPending &&
+        Boolean(
+          actor &&
+            (actor.profile.role !== "citizen" ||
+              (authorId && authorId === actor.profile.id))
+        ),
+      authorId,
+      viewerId: actor?.profile.id,
+      limit,
+      offset,
+    });
+
+    return NextResponse.json(result, {
+      headers: actor
+        ? { "Cache-Control": "private, no-store" }
+        : { "Cache-Control": "public, s-maxage=30, stale-while-revalidate=60" },
+    });
+  } catch (err: unknown) {
+    return NextResponse.json(
+      { error: err instanceof Error ? err.message : "Failed to load articles." },
+      { status: 503 }
+    );
+  }
 }
 
 export async function POST(req: NextRequest) {
   try {
+    const ip = getClientIp(req);
+    const rl = checkRateLimit(`posts-post:${ip}`, 15, 60);
+    if (!rl.success) {
+      return NextResponse.json(
+        { error: "Too many submission attempts. Please slow down and try again shortly." },
+        { status: 429, headers: { "Retry-After": "60" } }
+      );
+    }
+
+    const actor = await resolveRequestActor(req);
+    if (!actor) {
+      return NextResponse.json(
+        { error: "Unauthorized: sign in to submit news tips or publish stories." },
+        { status: 401 }
+      );
+    }
+    if (actor.profile.isSuspended) {
+      return NextResponse.json(
+        { error: "Forbidden: suspended accounts cannot submit or publish content." },
+        { status: 403 }
+      );
+    }
+
     const body = await req.json();
 
     if (!body.headline || !body.body || !body.localityId || !body.category) {
@@ -68,53 +103,48 @@ export async function POST(req: NextRequest) {
             ? "photo"
             : "dispatch");
 
-    // Authorized Newsroom Publishing (Official Dispatches, Breaking News, Sponsored Partner notices)
+    // Authorised Newsroom Publishing (strictly ignores body.authorId and checks session actor permission)
     if (body.publishMode === "newsroom" || body.publishMode === "sponsored") {
-      const result = createNewsroomDispatch({
-        authorId: body.authorId,
-        localityId: body.localityId,
-        category: body.category,
-        format,
-        sourceKind:
-          body.publishMode === "sponsored" ? "sponsored" : "newsroom",
-        sponsorInfo: body.sponsorInfo,
-        headline: body.headline,
-        body: body.body,
-        isBreaking: Boolean(body.isBreaking),
-        isMoment: Boolean(body.isMoment),
-        playlistSlug: body.playlistSlug,
-        approxLandmark: body.approxLandmark,
-        media,
-      });
-
-      if (result.error) {
-        return NextResponse.json({ error: result.error }, { status: 403 });
+      if (!hasActorPermission(actor, "publish")) {
+        return NextResponse.json(
+          {
+            error:
+              "Forbidden: only authorised staff with active publishing permission can publish newsroom or sponsored articles.",
+          },
+          { status: 403 }
+        );
       }
-      return NextResponse.json({ post: result.post }, { status: 201 });
+    }
+    if (body.isBreaking && !hasActorPermission(actor, "breaking")) {
+      return NextResponse.json(
+        { error: "Forbidden: breaking news requires explicit editorial permission." },
+        { status: 403 }
+      );
     }
 
-    // Standard Citizen Submission: ALWAYS community + pending + non-breaking
-    const post = await createCitizenPost({
-      authorId: body.authorId,
-      authorName: body.authorName,
-      authorUsername: body.authorUsername,
+    const result = await createPostRepository({
+      authorId: actor.profile.id,
+      authorProfile: actor.profile,
       localityId: body.localityId,
-      category: body.category,
+      category: body.category as PostCategory,
       format,
-      headline: body.headline,
-      body: body.body,
+      sourceKind: body.publishMode === "sponsored" ? "sponsored" : body.publishMode === "newsroom" ? "newsroom" : "citizen",
+      headline: sanitizeText(body.headline, 300),
+      body: sanitizeText(body.body, 10000),
+      isBreaking: Boolean(body.isBreaking),
       isMoment: Boolean(body.isMoment),
+      media,
+      approxLandmark: sanitizeText(body.approxLandmark, 200),
       sharePreciseLocation: Boolean(body.sharePreciseLocation),
       preciseLat: body.sharePreciseLocation ? body.preciseLat : null,
       preciseLng: body.sharePreciseLocation ? body.preciseLng : null,
-      approxLandmark: body.approxLandmark,
-      media,
+      publishMode: body.publishMode,
     });
 
-    return NextResponse.json({ post }, { status: 201 });
-  } catch {
+    return NextResponse.json(result, { status: 201 });
+  } catch (err: unknown) {
     return NextResponse.json(
-      { error: "Invalid submission payload." },
+      { error: err instanceof Error ? err.message : "Invalid submission payload." },
       { status: 400 }
     );
   }

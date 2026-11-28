@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef } from "react";
+import Image from "next/image";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import {
@@ -12,7 +13,7 @@ import {
 } from "framer-motion";
 import { usePathname } from "next/navigation";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, isLocalImageSrc } from "@/lib/utils";
 
 if (typeof window !== "undefined") {
   gsap.registerPlugin(ScrollTrigger);
@@ -21,7 +22,7 @@ if (typeof window !== "undefined") {
 export const EASE_EDITORIAL: [number, number, number, number] = [0.22, 1, 0.36, 1];
 
 /**
- * Motion for React: Reading progress bar in Electric Blue (#398BFF).
+ * Motion for React: Reading progress bar in Electric Blue (#315CFF).
  */
 export function ScrollProgressBar() {
   const { scrollYProgress } = useScroll();
@@ -35,7 +36,7 @@ export function ScrollProgressBar() {
     <motion.div
       aria-hidden="true"
       style={{ scaleX }}
-      className="fixed top-0 left-0 right-0 z-50 h-[2.5px] origin-left bg-[#398BFF] shadow-[0_0_12px_rgba(57,139,255,0.65)] pointer-events-none"
+      className="fixed top-0 left-0 right-0 z-50 h-[2.5px] origin-left bg-[#315CFF] shadow-[0_0_12px_rgba(57,139,255,0.65)] pointer-events-none"
     />
   );
 }
@@ -110,7 +111,7 @@ export function MaskedHeadlineReveal({
             : { y: "100%", clipPath: "inset(0% 0% 100% 0%)", opacity: 0.25 }
         }
         animate={{ y: 0, clipPath: "inset(0% 0% 0% 0%)", opacity: 1 }}
-        transition={{ duration: 0.68, delay, ease: EASE_EDITORIAL }}
+        transition={{ duration: 0.36, delay, ease: EASE_EDITORIAL }}
         className={className}
       >
         {children}
@@ -202,10 +203,11 @@ export function EditorialReveal({
           duration: 0.68,
           delay,
           ease: "power3.out",
-          clearProps: "clipPath,transform",
+          immediateRender: false,
+          clearProps: "clipPath,transform,opacity",
           scrollTrigger: {
             trigger: ref.current,
-            start: "top 89%",
+            start: "top 92%",
             once: true,
           },
         }
@@ -258,14 +260,16 @@ export function StaggerGroup({
           duration: 0.56,
           stagger: 0.075,
           ease: "power3.out",
-          clearProps: "transform",
+          immediateRender: false,
+          clearProps: "transform,opacity",
           scrollTrigger: {
             trigger: containerRef.current,
-            start: "top 88%",
+            start: "top 92%",
             once: true,
           },
         }
       );
+      ScrollTrigger.refresh();
     });
 
     return () => mm.revert();
@@ -350,7 +354,7 @@ export function AnimatedNavPill({
       layoutId={layoutId}
       transition={{ type: "spring", stiffness: 460, damping: 36 }}
       className={cn(
-        "absolute inset-0 rounded-full bg-[#1B5E43] shadow-xs -z-10",
+        "absolute inset-0 rounded-full bg-[#173FBE] shadow-xs -z-10",
         className
       )}
     />
@@ -365,12 +369,16 @@ export function GsapImageMask({
   alt,
   immediate = false,
   className,
+  sizes = "100vw",
+  priority = false,
   children,
 }: {
   src: string;
   alt: string;
   immediate?: boolean;
   className?: string;
+  sizes?: string;
+  priority?: boolean;
   children?: React.ReactNode;
 }) {
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -387,7 +395,7 @@ export function GsapImageMask({
         {
           clipPath: "inset(0% 0% 0% 0%)",
           opacity: 1,
-          duration: 0.85,
+          duration: 0.42,
           ease: "power3.out",
           ...(immediate
             ? {}
@@ -424,13 +432,17 @@ export function GsapImageMask({
   return (
     <div
       ref={containerRef}
-      className={cn("group relative overflow-hidden bg-[#181917]", className)}
+      className={cn("group relative overflow-hidden bg-[#111318]", className)}
     >
-      <img
+      <Image
         ref={imgRef}
         src={src}
         alt={alt}
-        className="h-full w-full object-cover will-change-transform transition-transform duration-700 ease-out group-hover:scale-[1.03]"
+        fill
+        sizes={sizes}
+        priority={priority}
+        unoptimized={!isLocalImageSrc(src)}
+        className="object-cover will-change-transform transition-transform duration-700 ease-out group-hover:scale-[1.03]"
       />
       {children}
     </div>
@@ -461,12 +473,12 @@ export function HorizontalCarousel({
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
             {subtitle && (
-              <p className="font-mono text-[10px] font-bold uppercase tracking-widest text-[#1B5E43]">
+              <p className="font-mono text-[10px] font-bold uppercase tracking-widest text-[#173FBE]">
                 {subtitle}
               </p>
             )}
             {title && (
-              <h2 className="font-display text-xl sm:text-2xl font-extrabold text-[#181917]">
+              <h2 className="font-display text-xl sm:text-2xl font-extrabold text-[#111318]">
                 {title}
               </h2>
             )}
@@ -480,7 +492,7 @@ export function HorizontalCarousel({
                 whileTap={{ scale: 0.92 }}
                 aria-label="Scroll carousel left"
                 onClick={() => scrollByAmount(-1)}
-                className="flex h-8 w-8 items-center justify-center rounded-full border border-[#E5E3DC] bg-white text-[#181917] transition-colors hover:border-[#398BFF] hover:text-[#398BFF]"
+                className="flex h-8 w-8 items-center justify-center rounded-full border border-[#E2E7F0] bg-white text-[#111318] transition-colors hover:border-[#315CFF] hover:text-[#315CFF]"
               >
                 <ChevronLeft className="h-4 w-4" />
               </motion.button>
@@ -490,7 +502,7 @@ export function HorizontalCarousel({
                 whileTap={{ scale: 0.92 }}
                 aria-label="Scroll carousel right"
                 onClick={() => scrollByAmount(1)}
-                className="flex h-8 w-8 items-center justify-center rounded-full border border-[#E5E3DC] bg-white text-[#181917] transition-colors hover:border-[#398BFF] hover:text-[#398BFF]"
+                className="flex h-8 w-8 items-center justify-center rounded-full border border-[#E2E7F0] bg-white text-[#111318] transition-colors hover:border-[#315CFF] hover:text-[#315CFF]"
               >
                 <ChevronRight className="h-4 w-4" />
               </motion.button>
@@ -563,9 +575,9 @@ export function PageTransition({ children }: { children: React.ReactNode }) {
   return (
     <motion.div
       key={pathname}
-      initial={prefersReduced ? false : { opacity: 0, y: 8 }}
+      initial={prefersReduced ? false : { opacity: 0, y: 4 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3, ease: EASE_EDITORIAL }}
+      transition={{ duration: 0.16, ease: EASE_EDITORIAL }}
     >
       {children}
     </motion.div>
